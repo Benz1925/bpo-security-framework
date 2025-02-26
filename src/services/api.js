@@ -1,11 +1,21 @@
-// API base URL - will be different in development vs production
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+// Get API base URL from runtime config if available, fallback to env vars or default
+const getApiBaseUrl = () => {
+  // Check if window and APP_CONFIG are available (client-side)
+  if (typeof window !== 'undefined' && window.APP_CONFIG) {
+    return window.APP_CONFIG.apiUrl;
+  }
+  // Fallback to environment variable or default
+  return process.env.NEXT_PUBLIC_API_URL || '/api';
+};
 
 // Security Tests API
 export const securityTestsApi = {
   // Run a security test
   runTest: async (testType) => {
     try {
+      // Get the API base URL
+      const API_BASE_URL = getApiBaseUrl();
+      
       // In development, use mock data if API is not available
       if (process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_API_URL) {
         // Simulate API delay
