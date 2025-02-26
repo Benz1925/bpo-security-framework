@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "export": "next export",
+    "build:api": "cd api && npm install",
+    "build:static": "next build && next export -o out"
   },
   "dependencies": {
     "lucide-react": "^0.476.0",

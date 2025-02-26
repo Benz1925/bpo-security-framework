@@ -3,11 +3,20 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Shield, AlertCircle, Check, X } from 'lucide-react';
+import { Shield, AlertCircle, Check, X, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import TestResultsDetail from '@/components/security/TestResultsDetail';
+import { securityTestsApi } from '@/services/api';
 
-const BPOSecurityTest = () => {
+const BPOSecurityTest = ({ client }) => {
   const [testResults, setTestResults] = useState({
+    encryption: null,
+    access: null,
+    dataProtection: null,
+    compliance: null
+  });
+  
+  const [testDetails, setTestDetails] = useState({
     encryption: null,
     access: null,
     dataProtection: null,
@@ -21,21 +30,26 @@ const BPOSecurityTest = () => {
     dataProtection: false,
     compliance: false
   });
+  
+  const [selectedTest, setSelectedTest] = useState(null);
 
   const runSecurityTest = async (testType) => {
     // Set loading state for this specific test
     setIsLoading(prev => ({...prev, [testType]: true}));
     
     try {
-      // Simulate API call with delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the API service
+      const result = await securityTestsApi.runTest(testType);
       
-      // Simulate security test with more realistic success rate
-      const success = Math.random() > 0.3;
-      setTestResults(prev => ({...prev, [testType]: success}));
+      // Update test results
+      setTestResults(prev => ({...prev, [testType]: result.success}));
       
-      if (!success) {
-        const timestamp = new Date().toLocaleTimeString();
+      // Store test details
+      setTestDetails(prev => ({...prev, [testType]: result.details}));
+      
+      // Add alert based on result
+      const timestamp = new Date().toLocaleTimeString();
+      if (!result.success) {
         setAlerts(prev => [...prev, 
           {
             type: 'error',
@@ -44,7 +58,6 @@ const BPOSecurityTest = () => {
           }
         ]);
       } else {
-        const timestamp = new Date().toLocaleTimeString();
         setAlerts(prev => [...prev, 
           {
             type: 'success',
@@ -53,6 +66,20 @@ const BPOSecurityTest = () => {
           }
         ]);
       }
+      
+      // Automatically select this test to show details
+      setSelectedTest(testType);
+    } catch (error) {
+      console.error(`Error running ${testType} test:`, error);
+      // Add error alert
+      const timestamp = new Date().toLocaleTimeString();
+      setAlerts(prev => [...prev, 
+        {
+          type: 'error',
+          message: `Error running ${testType} test: ${error.message}`,
+          timestamp
+        }
+      ]);
     } finally {
       setIsLoading(prev => ({...prev, [testType]: false}));
     }
@@ -77,7 +104,7 @@ const BPOSecurityTest = () => {
   };
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -88,23 +115,49 @@ const BPOSecurityTest = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="p-4 border border-gray-200">
-              <h3 className="font-semibold mb-4 text-lg">Customer: ACME Corp</h3>
+              <h3 className="font-semibold mb-4 text-lg">
+                Customer: {client?.name || 'ACME Corp'}
+              </h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div 
+                  className="flex items-center justify-between p-2 border rounded hover:bg-gray-50 cursor-pointer"
+                  onClick={() => testResults.encryption !== null && setSelectedTest('encryption')}
+                >
                   <span className="font-medium">Data Encryption:</span>
-                  {getStatusIcon(testResults.encryption)}
+                  <div className="flex items-center gap-1">
+                    {getStatusIcon(testResults.encryption)}
+                    {testResults.encryption !== null && <ChevronRight className="h-4 w-4 text-gray-400" />}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
+                <div 
+                  className="flex items-center justify-between p-2 border rounded hover:bg-gray-50 cursor-pointer"
+                  onClick={() => testResults.access !== null && setSelectedTest('access')}
+                >
                   <span className="font-medium">Access Control:</span>
-                  {getStatusIcon(testResults.access)}
+                  <div className="flex items-center gap-1">
+                    {getStatusIcon(testResults.access)}
+                    {testResults.access !== null && <ChevronRight className="h-4 w-4 text-gray-400" />}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
+                <div 
+                  className="flex items-center justify-between p-2 border rounded hover:bg-gray-50 cursor-pointer"
+                  onClick={() => testResults.dataProtection !== null && setSelectedTest('dataProtection')}
+                >
                   <span className="font-medium">Data Protection:</span>
-                  {getStatusIcon(testResults.dataProtection)}
+                  <div className="flex items-center gap-1">
+                    {getStatusIcon(testResults.dataProtection)}
+                    {testResults.dataProtection !== null && <ChevronRight className="h-4 w-4 text-gray-400" />}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
+                <div 
+                  className="flex items-center justify-between p-2 border rounded hover:bg-gray-50 cursor-pointer"
+                  onClick={() => testResults.compliance !== null && setSelectedTest('compliance')}
+                >
                   <span className="font-medium">Compliance:</span>
-                  {getStatusIcon(testResults.compliance)}
+                  <div className="flex items-center gap-1">
+                    {getStatusIcon(testResults.compliance)}
+                    {testResults.compliance !== null && <ChevronRight className="h-4 w-4 text-gray-400" />}
+                  </div>
                 </div>
               </div>
             </Card>
@@ -160,6 +213,16 @@ const BPOSecurityTest = () => {
               </div>
             </Card>
           </div>
+
+          {selectedTest && (
+            <div className="mt-6">
+              <TestResultsDetail 
+                testType={selectedTest} 
+                result={testResults[selectedTest]}
+                details={testDetails[selectedTest]} 
+              />
+            </div>
+          )}
 
           {alerts.length > 0 && (
             <div className="mt-6 space-y-2">

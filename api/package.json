@@ -1,0 +1,15 @@
+{
+  "name": "bpo-security-framework-api",
+  "version": "1.0.0",
+  "description": "API for BPO Security Framework",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "@azure/functions": "^3.0.0"
+  },
+  "devDependencies": {
+    "azure-functions-core-tools": "^4.x"
+  }
+} 
