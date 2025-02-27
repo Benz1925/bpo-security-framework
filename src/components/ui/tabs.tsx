@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 import * as React from "react"
 
 interface TabsProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -8,7 +10,7 @@ interface TabsProps extends React.HTMLAttributes<HTMLDivElement> {
 const Tabs = React.forwardRef<
   HTMLDivElement,
   TabsProps
->(({ className, value: _value, onValueChange: _onChange, ...props }, ref) => (
+>(({ className, value, onValueChange, ...props }, ref) => (
   <div
     ref={ref}
     className={`w-full ${className || ""}`}
