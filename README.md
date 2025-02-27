@@ -2,6 +2,10 @@
 
 A comprehensive security testing and compliance framework for Business Process Outsourcing (BPO) operations.
 
+## Deployment Status
+
+Last deployment test: ✅ Successfully deployed on `$(date)`
+
 ## Features
 
 - Security test execution for encryption, access control, data protection, and compliance
