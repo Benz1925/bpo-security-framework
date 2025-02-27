@@ -4,7 +4,8 @@
   "description": "API for BPO Security Framework",
   "scripts": {
     "start": "func start",
-    "test": "echo \"No tests yet\""
+    "test": "echo \"No tests yet\"",
+    "build:api": "echo \"No build step required for Azure Functions\""
   },
   "dependencies": {
     "@azure/functions": "^3.0.0",

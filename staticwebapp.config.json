@@ -27,8 +27,8 @@
     }
   },
   "globalHeaders": {
-    "content-security-policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: https://*.azurestaticapps.net; connect-src 'self' https://*.azurestaticapps.net",
-    "cache-control": "must-revalidate, max-age=600",
+    "content-security-policy": "default-src https: 'unsafe-eval' 'unsafe-inline'; object-src 'none'",
+    "cache-control": "no-cache",
     "X-Frame-Options": "DENY",
     "X-Content-Type-Options": "nosniff"
   },
@@ -36,7 +36,7 @@
     "identityProviders": {
       "azureActiveDirectory": {
         "registration": {
-          "openIdIssuer": "https://login.microsoftonline.com/{TENANT_ID}/v2.0",
+          "openIdIssuer": "https://login.microsoftonline.com/common",
           "clientIdSettingName": "AZURE_CLIENT_ID",
           "clientSecretSettingName": "AZURE_CLIENT_SECRET"
         }
@@ -44,6 +44,6 @@
     }
   },
   "platform": {
-    "apiRuntime": "node:16"
+    "apiRuntime": "node:18"
   }
 } 
