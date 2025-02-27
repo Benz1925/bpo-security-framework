@@ -1,19 +1,29 @@
 {
   "routes": [
     {
-      "route": "/api/securityTests/encryptionTest",
-      "methods": ["GET", "POST"],
+      "route": "/api/security-tests/encryption",
+      "methods": [
+        "get",
+        "post"
+      ],
       "rewrite": "/api/securityTests/encryptionTest/index"
     },
     {
       "route": "/api/*",
-      "methods": ["GET", "POST"],
+      "methods": [
+        "GET",
+        "POST"
+      ],
       "rewrite": "/api/$1"
     }
   ],
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/images/*.{png,jpg,gif}", "/css/*", "/api/*"]
+    "exclude": [
+      "/images/*.{png,jpg,gif}",
+      "/css/*",
+      "/api/*"
+    ]
   },
   "responseOverrides": {
     "404": {
@@ -41,4 +51,4 @@
   "platform": {
     "apiRuntime": "node:18"
   }
-} 
+}
