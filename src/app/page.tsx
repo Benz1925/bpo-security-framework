@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import BPOSecurityTest from "@/components/BPOSecurityTest";
 import LoginForm from "@/components/auth/LoginForm";
 import Navbar from "@/components/layout/Navbar";
@@ -23,7 +23,7 @@ interface Client {
 }
 
 export default function Home() {
-  const { user, login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const handleLogin = (userData: User) => {
