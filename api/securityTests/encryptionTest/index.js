@@ -13,10 +13,14 @@ module.exports = async function (context, req) {
             body: {
                 message: "API endpoint is reachable",
                 timestamp: new Date().toISOString(),
+                route: req.url,
+                headers: req.headers,
                 environmentVariables: {
                     hasStorageAccountName: process.env.STORAGE_ACCOUNT_NAME ? true : false,
                     hasStorageAccountKey: process.env.STORAGE_ACCOUNT_KEY ? true : false,
-                    hasSubscriptionId: process.env.AZURE_SUBSCRIPTION_ID ? true : false
+                    hasSubscriptionId: process.env.AZURE_SUBSCRIPTION_ID ? true : false,
+                    hasKeyVaultUrl: process.env.KEY_VAULT_URL ? true : false,
+                    nodeEnv: process.env.NODE_ENV || 'not set'
                 }
             },
             headers: {

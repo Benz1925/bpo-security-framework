@@ -1,0 +1,14 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureWebJobsStorage": "",
+    "STORAGE_ACCOUNT_NAME": "bposecuritystorage",
+    "AZURE_SUBSCRIPTION_ID": "4bbdbb6d-164b-4342-bd0f-bca897cb796",
+    "KEY_VAULT_URL": "https://bpo-security-kv.vault.azure.net/"
+  },
+  "Host": {
+    "CORS": "*",
+    "LocalHttpPort": 7071
+  }
+} 

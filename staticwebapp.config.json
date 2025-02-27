@@ -14,7 +14,21 @@
         "get",
         "post"
       ],
-      "rewrite": "/api/securityTests/encryptionTest/index"
+      "rewrite": "/api/securityTests/encryptionTest/index",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    },
+    {
+      "route": "/api/security-tests/encryption-simple",
+      "methods": [
+        "get",
+        "post"
+      ],
+      "rewrite": "/api/securityTests/encryptionTest/simplified",
+      "headers": {
+        "Content-Type": "application/json"
+      }
     },
     {
       "route": "/api/*",

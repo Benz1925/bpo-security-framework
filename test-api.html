@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Direct API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            max-height: 400px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0062ad;
+        }
+        input {
+            padding: 8px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .button-group {
+            display: flex;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Direct API Testing Tool</h1>
+    
+    <div>
+        <h2>Base URL</h2>
+        <input type="text" id="baseUrl" value="https://lively-forest-016623d0f4.azurestaticapps.net">
+        
+        <h2>Test Endpoints</h2>
+        <div class="button-group">
+            <button onclick="testAPI('/api/test')">Test Regular API</button>
+            <button onclick="testAPI('/api/security-tests/encryption')">Test Encryption API</button>
+            <button onclick="testAPI('/api/security-tests/encryption-simple')">Test Simple Encryption API</button>
+        </div>
+        
+        <h3>Response:</h3>
+        <pre id="result">Click one of the buttons above to test an endpoint</pre>
+    </div>
+    
+    <script>
+        async function testAPI(endpoint) {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const apiUrl = baseUrl + endpoint;
+            
+            document.getElementById('result').textContent = `Testing ${apiUrl}...`;
+            
+            try {
+                // Try to fetch the API
+                const response = await fetch(apiUrl);
+                
+                // Get status
+                const status = response.status;
+                
+                // Try to parse response as JSON (might not be JSON)
+                let data;
+                const contentType = response.headers.get('content-type');
+                
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    data = await response.text();
+                }
+                
+                // Format the result
+                const result = {
+                    url: apiUrl,
+                    status,
+                    contentType,
+                    data
+                };
+                
+                // Display result
+                document.getElementById('result').textContent = 
+                    JSON.stringify(result, null, 2);
+                    
+            } catch (error) {
+                // Handle errors
+                document.getElementById('result').textContent = 
+                    `Error: ${error.message}\nAPI URL: ${apiUrl}`;
+            }
+        }
+    </script>
+</body>
+</html> 

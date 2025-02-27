@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0062ad;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Test Page</h1>
+    <p>Use this page to test the API endpoints.</p>
+    
+    <h2>Test Endpoints</h2>
+    
+    <div>
+        <h3>1. Encryption Test API</h3>
+        <button onclick="testEncryptionAPI()">Test Encryption API</button>
+        <h4>Response:</h4>
+        <pre id="encryptionResult">Click the button above to test</pre>
+    </div>
+    
+    <script>
+        // Function to test the encryption API
+        async function testEncryptionAPI() {
+            document.getElementById('encryptionResult').textContent = 'Loading...';
+            
+            try {
+                // Try to fetch the API
+                const response = await fetch('/api/security-tests/encryption');
+                
+                // Get status
+                const status = response.status;
+                
+                // Try to parse response as JSON (might not be JSON)
+                let data;
+                const contentType = response.headers.get('content-type');
+                
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    data = await response.text();
+                }
+                
+                // Format the result
+                const result = {
+                    status,
+                    contentType,
+                    data
+                };
+                
+                // Display result
+                document.getElementById('encryptionResult').textContent = 
+                    JSON.stringify(result, null, 2);
+                    
+            } catch (error) {
+                // Handle errors
+                document.getElementById('encryptionResult').textContent = 
+                    `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html> 
