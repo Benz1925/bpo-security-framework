@@ -6,6 +6,26 @@ const { SecretClient } = require('@azure/keyvault-secrets');
 module.exports = async function (context, req) {
     context.log('Encryption Security Test API triggered');
 
+    // For simple GET requests, return debugging info
+    if (req.method === "GET") {
+        context.res = {
+            status: 200,
+            body: {
+                message: "API endpoint is reachable",
+                timestamp: new Date().toISOString(),
+                environmentVariables: {
+                    hasStorageAccountName: process.env.STORAGE_ACCOUNT_NAME ? true : false,
+                    hasStorageAccountKey: process.env.STORAGE_ACCOUNT_KEY ? true : false,
+                    hasSubscriptionId: process.env.AZURE_SUBSCRIPTION_ID ? true : false
+                }
+            },
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
+        return;
+    }
+
     try {
         // Get client ID from request or use default
         const clientId = req.body && req.body.clientId ? req.body.clientId : '1';
