@@ -22,18 +22,29 @@ const SecurityDashboard = ({ client }) => {
     error: null,
     isMock: false
   });
+  
+  // Use this to track if component is mounted (client-side only)
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // Set isMounted to true when component mounts (client-side only)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
-  // Check if we should use mock data from config
+  // Check if we should use mock data from config - only run on client
   const shouldUseMockData = () => {
-    if (typeof window !== 'undefined' && window.APP_CONFIG) {
+    if (isMounted && typeof window !== 'undefined' && window.APP_CONFIG) {
       console.log("APP_CONFIG detected:", window.APP_CONFIG);
       return window.APP_CONFIG.useMockApi === true;
     }
-    return false;
+    return true; // Default to mock data to avoid hydration errors
   };
 
   // Fetch data for the dashboard
   useEffect(() => {
+    // Skip this effect during server-side rendering
+    if (!isMounted) return;
+    
     const fetchDashboardData = async () => {
       if (!client) return;
       
@@ -51,7 +62,7 @@ const SecurityDashboard = ({ client }) => {
       const timeoutId = setTimeout(() => {
         console.log("API fetch timeout - falling back to mock data");
         generateMockDashboardData("API request timed out");
-      }, typeof window !== 'undefined' && window.APP_CONFIG?.apiTimeout ? window.APP_CONFIG.apiTimeout : 5000);
+      }, isMounted && typeof window !== 'undefined' && window.APP_CONFIG?.apiTimeout ? window.APP_CONFIG.apiTimeout : 5000);
       
       try {
         // Fetch results for each test type
@@ -97,7 +108,7 @@ const SecurityDashboard = ({ client }) => {
               success: false, 
               error: error.message,
               isMock: true,
-              details: getMockTestDetails(testType, false)
+              details: getMockTestDetails(testType, false, client?.id || '1')
             };
           }
         }
@@ -131,10 +142,14 @@ const SecurityDashboard = ({ client }) => {
       let totalScore = 0;
       let criticalCount = 0;
       
+      // Use client ID as seed for deterministic results
+      const clientId = client?.id || '1';
+      
       // Generate mock results for each test type
       for (const testType of testTypes) {
-        const success = Math.random() > 0.3;
-        const mockDetails = getMockTestDetails(testType, success);
+        // Use deterministic success based on client ID and test type
+        const success = ((parseInt(clientId) + testType.length) % 3) !== 0;
+        const mockDetails = getMockTestDetails(testType, success, clientId);
         results[testType] = {
           success,
           testType,
@@ -143,8 +158,8 @@ const SecurityDashboard = ({ client }) => {
           isMock: true
         };
         
-        // Add to total score (random score between 60-95)
-        const score = mockDetails.overallScore || Math.floor(Math.random() * 35) + 60;
+        // Add to total score (deterministic score based on client ID)
+        const score = mockDetails.overallScore;
         totalScore += score;
         
         // Count critical issues
@@ -154,7 +169,7 @@ const SecurityDashboard = ({ client }) => {
                 typeof rec === 'object' && (rec.priority === 'critical' || rec.priority === 'high')
               )
             : [];
-          criticalCount += criticalRecs.length || Math.floor(Math.random() * 2) + 1;
+          criticalCount += criticalRecs.length;
         }
       }
       
@@ -173,10 +188,12 @@ const SecurityDashboard = ({ client }) => {
     };
     
     fetchDashboardData();
-  }, [client]);
+  }, [client, isMounted]);
 
   // Manually refresh the dashboard
   const refreshDashboard = () => {
+    if (!isMounted) return;
+    
     setDashboardData(prev => ({ ...prev, isLoading: true, error: null }));
     // Re-trigger the useEffect
     const clientCopy = {...client};
@@ -210,6 +227,28 @@ const SecurityDashboard = ({ client }) => {
     const date = new Date(dateString);
     return date.toLocaleString();
   };
+
+  // If not mounted yet (server-side), render a simple placeholder
+  if (!isMounted) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-6 h-6 text-blue-600" />
+              Security Dashboard
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <div className="inline-block rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+              <p>Loading dashboard data...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -369,71 +408,85 @@ const SecurityDashboard = ({ client }) => {
   }
 };
 
-// Helper function to generate mock test details
-function getMockTestDetails(testType, success) {
+// Helper function to generate mock test details with deterministic values
+function getMockTestDetails(testType, success, clientId = '1') {
+  // Convert clientId to a number to use as seed
+  const seed = parseInt(clientId, 10) || 1;
+  
+  // Generate deterministic score based on client ID and test type
+  const getScore = (offset) => {
+    // Generate a score between 60-95 based on clientId and test type
+    return 60 + ((seed + testType.length + offset) % 36);
+  };
+  
+  // Generate deterministic boolean based on seed
+  const getBool = (offset) => {
+    return ((seed + offset + testType.length) % 4) !== 0;
+  };
+  
   const testDetails = {
     encryption: {
       title: 'Data Encryption Test',
       description: 'Verifies that all sensitive data is properly encrypted at rest and in transit.',
       checkpoints: [
-        { name: 'TLS 1.2+ for all connections', status: success ? true : Math.random() > 0.3 },
-        { name: 'AES-256 encryption for stored data', status: success ? true : Math.random() > 0.3 },
-        { name: 'Proper key management', status: success ? true : Math.random() > 0.3 },
-        { name: 'Encrypted database backups', status: success ? true : Math.random() > 0.3 }
+        { name: 'TLS 1.2+ for all connections', status: success ? true : getBool(1) },
+        { name: 'AES-256 encryption for stored data', status: success ? true : getBool(2) },
+        { name: 'Proper key management', status: success ? true : getBool(3) },
+        { name: 'Encrypted database backups', status: success ? true : getBool(4) }
       ],
       recommendations: [
         { title: 'Implement TLS 1.3', description: 'Upgrade to TLS 1.3 for all connections', priority: 'medium' },
         { title: 'Rotate encryption keys', description: 'Set up automatic key rotation every 90 days', priority: 'high' }
       ],
-      overallScore: Math.floor(Math.random() * 35) + 60,
+      overallScore: getScore(0),
       complianceStatus: success ? 'Compliant' : 'Non-compliant'
     },
     access: {
       title: 'Access Control Test',
       description: 'Evaluates the effectiveness of access controls and authentication mechanisms.',
       checkpoints: [
-        { name: 'Multi-factor authentication', status: success ? true : Math.random() > 0.3 },
-        { name: 'Role-based access control', status: success ? true : Math.random() > 0.3 },
-        { name: 'Least privilege principle', status: success ? true : Math.random() > 0.3 },
-        { name: 'Regular access reviews', status: success ? true : Math.random() > 0.3 }
+        { name: 'Multi-factor authentication', status: success ? true : getBool(5) },
+        { name: 'Role-based access control', status: success ? true : getBool(6) },
+        { name: 'Least privilege principle', status: success ? true : getBool(7) },
+        { name: 'Regular access reviews', status: success ? true : getBool(8) }
       ],
       recommendations: [
         { title: 'Enable MFA', description: 'Implement multi-factor authentication for all users', priority: 'critical' },
         { title: 'Review permissions', description: 'Conduct quarterly access reviews', priority: 'medium' }
       ],
-      overallScore: Math.floor(Math.random() * 35) + 60,
+      overallScore: getScore(1),
       complianceStatus: success ? 'Compliant' : 'Non-compliant'
     },
     dataProtection: {
       title: 'Data Protection Test',
       description: 'Assesses data protection measures including backup, retention, and DLP.',
       checkpoints: [
-        { name: 'Data loss prevention policies', status: success ? true : Math.random() > 0.3 },
-        { name: 'Regular backup verification', status: success ? true : Math.random() > 0.3 },
-        { name: 'Data classification', status: success ? true : Math.random() > 0.3 },
-        { name: 'Data retention policies', status: success ? true : Math.random() > 0.3 }
+        { name: 'Data loss prevention policies', status: success ? true : getBool(9) },
+        { name: 'Regular backup verification', status: success ? true : getBool(10) },
+        { name: 'Data classification', status: success ? true : getBool(11) },
+        { name: 'Data retention policies', status: success ? true : getBool(12) }
       ],
       recommendations: [
         { title: 'Implement DLP', description: 'Deploy data loss prevention solution', priority: 'high' },
         { title: 'Test backups', description: 'Implement monthly backup restoration tests', priority: 'medium' }
       ],
-      overallScore: Math.floor(Math.random() * 35) + 60,
+      overallScore: getScore(2),
       complianceStatus: success ? 'Compliant' : 'Non-compliant'
     },
     compliance: {
       title: 'Compliance Test',
       description: 'Verifies adherence to relevant regulatory and industry compliance standards.',
       checkpoints: [
-        { name: 'GDPR compliance', status: success ? true : Math.random() > 0.3 },
-        { name: 'ISO 27001 controls', status: success ? true : Math.random() > 0.3 },
-        { name: 'SOC 2 requirements', status: success ? true : Math.random() > 0.3 },
-        { name: 'Industry-specific regulations', status: success ? true : Math.random() > 0.3 }
+        { name: 'GDPR compliance', status: success ? true : getBool(13) },
+        { name: 'ISO 27001 controls', status: success ? true : getBool(14) },
+        { name: 'SOC 2 requirements', status: success ? true : getBool(15) },
+        { name: 'Industry-specific regulations', status: success ? true : getBool(16) }
       ],
       recommendations: [
         { title: 'Document controls', description: 'Create comprehensive compliance documentation', priority: 'high' },
         { title: 'Regular audits', description: 'Schedule quarterly compliance reviews', priority: 'medium' }
       ],
-      overallScore: Math.floor(Math.random() * 35) + 60,
+      overallScore: getScore(3),
       complianceStatus: success ? 'Compliant' : 'Non-compliant'
     }
   };
