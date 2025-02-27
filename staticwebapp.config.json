@@ -1,9 +1,9 @@
 {
   "routes": [
     {
-      "route": "/api/*",
+      "route": "/api/security-tests/*",
       "methods": ["GET", "POST"],
-      "rewrite": "/api/proxy"
+      "rewrite": "/api/securityTests/index"
     },
     {
       "route": "/*",

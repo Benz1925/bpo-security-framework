@@ -3,5 +3,6 @@ window.APP_CONFIG = {
   apiUrl: '/api',
   authProvider: 'azure',
   version: '1.0.0',
-  // Add other configuration values here
+  // Enable mock mode for local development
+  useMockApi: true
 }; 

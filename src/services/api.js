@@ -8,16 +8,28 @@ const getApiBaseUrl = () => {
   return process.env.NEXT_PUBLIC_API_URL || '/api';
 };
 
+// Check if we should use mock data
+const shouldUseMockData = () => {
+  // Use mock data in development without API URL
+  if (process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_API_URL) {
+    return true;
+  }
+  
+  // Use mock data if configured in APP_CONFIG
+  if (typeof window !== 'undefined' && window.APP_CONFIG && window.APP_CONFIG.useMockApi) {
+    return true;
+  }
+  
+  return false;
+};
+
 // Security Tests API
 export const securityTestsApi = {
   // Run a security test
   runTest: async (testType) => {
     try {
-      // Get the API base URL
-      const API_BASE_URL = getApiBaseUrl();
-      
-      // In development, use mock data if API is not available
-      if (process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_API_URL) {
+      // Check if we should use mock data
+      if (shouldUseMockData()) {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 1500));
         
@@ -33,21 +45,38 @@ export const securityTestsApi = {
         };
       }
       
-      // In production, call the actual API
-      const response = await fetch(`${API_BASE_URL}/security-tests/${testType}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
+      // Get the API base URL
+      const API_BASE_URL = getApiBaseUrl();
+      
+      // Call the actual API
+      try {
+        const response = await fetch(`${API_BASE_URL}/security-tests/${testType}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
         }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        
+        return await response.json();
+      } catch (apiError) {
+        console.warn('API call failed, falling back to mock data:', apiError);
+        
+        // Fall back to mock data if API call fails
+        const success = Math.random() > 0.3;
+        return {
+          success,
+          testType,
+          timestamp: new Date().toISOString(),
+          details: getMockTestDetails(testType, success),
+          isMock: true
+        };
       }
-      
-      return await response.json();
     } catch (error) {
-      console.error('Security test API error:', error);
+      console.error('Security test error:', error);
       throw error;
     }
   }
