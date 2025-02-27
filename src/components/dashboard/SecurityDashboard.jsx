@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, AlertTriangle, Check, X, BarChart, PieChart, Calendar } from 'lucide-react';
+import { Shield, AlertTriangle, Check, X, BarChart, PieChart, Calendar, RefreshCw } from 'lucide-react';
 import { securityTestsApi } from '@/services/api';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const SecurityDashboard = ({ client }) => {
   const [dashboardData, setDashboardData] = useState({
@@ -18,21 +19,39 @@ const SecurityDashboard = ({ client }) => {
     criticalIssues: 0,
     lastUpdated: null,
     isLoading: true,
-    error: null
+    error: null,
+    isMock: false
   });
+
+  // Check if we should use mock data from config
+  const shouldUseMockData = () => {
+    if (typeof window !== 'undefined' && window.APP_CONFIG) {
+      console.log("APP_CONFIG detected:", window.APP_CONFIG);
+      return window.APP_CONFIG.useMockApi === true;
+    }
+    return false;
+  };
 
   // Fetch data for the dashboard
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (!client) return;
       
+      console.log("Starting dashboard data fetch for client:", client);
       setDashboardData(prev => ({ ...prev, isLoading: true, error: null }));
+      
+      // Check if we should use mock data immediately
+      if (shouldUseMockData()) {
+        console.log("Mock mode enabled in config, using mock data immediately");
+        generateMockDashboardData();
+        return;
+      }
       
       // Set a timeout to ensure we don't wait forever
       const timeoutId = setTimeout(() => {
         console.log("API fetch timeout - falling back to mock data");
-        generateMockDashboardData();
-      }, 5000); // 5 second timeout
+        generateMockDashboardData("API request timed out");
+      }, typeof window !== 'undefined' && window.APP_CONFIG?.apiTimeout ? window.APP_CONFIG.apiTimeout : 5000);
       
       try {
         // Fetch results for each test type
@@ -40,12 +59,21 @@ const SecurityDashboard = ({ client }) => {
         const results = {};
         let totalScore = 0;
         let criticalCount = 0;
+        let apiSucceeded = false;
         
         for (const testType of testTypes) {
           try {
             console.log(`Fetching ${testType} data...`);
             const result = await securityTestsApi.runTest(testType, client.id);
             console.log(`Received ${testType} data:`, result);
+            
+            // Check if this is mock data from the API fallback
+            if (result.isMock) {
+              console.log(`Received mock data for ${testType} from API fallback`);
+            } else {
+              apiSucceeded = true;
+            }
+            
             results[testType] = result;
             
             // Add to total score
@@ -55,9 +83,11 @@ const SecurityDashboard = ({ client }) => {
             
             // Count critical issues
             if (result.details && result.details.recommendations) {
-              const criticalRecs = result.details.recommendations.filter(
-                rec => rec.priority === 'critical' || rec.priority === 'high'
-              );
+              const criticalRecs = Array.isArray(result.details.recommendations) 
+                ? result.details.recommendations.filter(rec => 
+                    typeof rec === 'object' && (rec.priority === 'critical' || rec.priority === 'high')
+                  )
+                : [];
               criticalCount += criticalRecs.length;
             }
           } catch (error) {
@@ -84,7 +114,8 @@ const SecurityDashboard = ({ client }) => {
           criticalIssues: criticalCount,
           lastUpdated: new Date().toISOString(),
           isLoading: false,
-          error: null
+          error: null,
+          isMock: !apiSucceeded
         });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -94,7 +125,7 @@ const SecurityDashboard = ({ client }) => {
     };
     
     const generateMockDashboardData = (errorMessage = null) => {
-      console.log("Generating mock dashboard data");
+      console.log("Generating mock dashboard data", errorMessage ? `due to error: ${errorMessage}` : "");
       const testTypes = ['encryption', 'access', 'dataProtection', 'compliance'];
       const results = {};
       let totalScore = 0;
@@ -113,14 +144,16 @@ const SecurityDashboard = ({ client }) => {
         };
         
         // Add to total score (random score between 60-95)
-        const score = Math.floor(Math.random() * 35) + 60;
+        const score = mockDetails.overallScore || Math.floor(Math.random() * 35) + 60;
         totalScore += score;
         
         // Count critical issues
         if (mockDetails.recommendations) {
-          const criticalRecs = mockDetails.recommendations.filter(
-            rec => rec.priority === 'critical' || rec.priority === 'high'
-          );
+          const criticalRecs = Array.isArray(mockDetails.recommendations) 
+            ? mockDetails.recommendations.filter(rec => 
+                typeof rec === 'object' && (rec.priority === 'critical' || rec.priority === 'high')
+              )
+            : [];
           criticalCount += criticalRecs.length || Math.floor(Math.random() * 2) + 1;
         }
       }
@@ -141,6 +174,19 @@ const SecurityDashboard = ({ client }) => {
     
     fetchDashboardData();
   }, [client]);
+
+  // Manually refresh the dashboard
+  const refreshDashboard = () => {
+    setDashboardData(prev => ({ ...prev, isLoading: true, error: null }));
+    // Re-trigger the useEffect
+    const clientCopy = {...client};
+    setTimeout(() => {
+      // Force a re-render by creating a new client object
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('force-dashboard-refresh', { detail: clientCopy }));
+      }
+    }, 100);
+  };
 
   // Get status color based on score
   const getStatusColor = (score) => {
@@ -168,7 +214,7 @@ const SecurityDashboard = ({ client }) => {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Shield className="w-6 h-6 text-blue-600" />
             Security Dashboard
@@ -178,6 +224,16 @@ const SecurityDashboard = ({ client }) => {
               </span>
             )}
           </CardTitle>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={refreshDashboard}
+            disabled={dashboardData.isLoading}
+            className="flex items-center gap-1"
+          >
+            <RefreshCw className={`h-4 w-4 ${dashboardData.isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </CardHeader>
         <CardContent>
           {dashboardData.isLoading ? (
@@ -186,15 +242,18 @@ const SecurityDashboard = ({ client }) => {
               <p>Loading dashboard data...</p>
             </div>
           ) : dashboardData.error ? (
-            <div className="text-center py-8">
-              <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
-              <p className="text-gray-700">API connection issue: {dashboardData.error}</p>
-              <p className="text-sm text-gray-500 mt-2">Showing mock data instead</p>
+            <div className="space-y-4">
+              <Alert variant="destructive">
+                <AlertDescription className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  API connection issue: {dashboardData.error}
+                </AlertDescription>
+              </Alert>
+              
+              <p className="text-sm text-gray-500 mb-4">Showing mock data instead</p>
               
               {/* Display mock data anyway */}
-              <div className="mt-6">
-                {renderDashboardContent()}
-              </div>
+              {renderDashboardContent()}
             </div>
           ) : (
             renderDashboardContent()
@@ -277,7 +336,7 @@ const SecurityDashboard = ({ client }) => {
                 </div>
                 {result.details?.recommendations && (
                   <div className="mt-2 text-sm text-gray-600">
-                    {result.details.recommendations.length} recommendation(s)
+                    {Array.isArray(result.details.recommendations) ? result.details.recommendations.length : 0} recommendation(s)
                   </div>
                 )}
                 {result.isMock && (
