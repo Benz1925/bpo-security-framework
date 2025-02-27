@@ -8,7 +8,7 @@ interface TabsProps extends React.HTMLAttributes<HTMLDivElement> {
 const Tabs = React.forwardRef<
   HTMLDivElement,
   TabsProps
->(({ className, value, onValueChange, ...props }, ref) => (
+>(({ className, value: _value, onValueChange: _onChange, ...props }, ref) => (
   <div
     ref={ref}
     className={`w-full ${className || ""}`}
@@ -17,7 +17,9 @@ const Tabs = React.forwardRef<
 ))
 Tabs.displayName = "Tabs"
 
-interface TabsListProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface TabsListProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Container for tab triggers */
+}
 
 const TabsList = React.forwardRef<
   HTMLDivElement,
