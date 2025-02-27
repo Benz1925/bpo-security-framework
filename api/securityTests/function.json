@@ -9,7 +9,7 @@
         "get",
         "post"
       ],
-      "route": "security-tests/{testType?}"
+      "route": "securityTests"
     },
     {
       "type": "http",

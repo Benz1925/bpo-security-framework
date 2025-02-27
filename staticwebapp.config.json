@@ -1,19 +1,14 @@
 {
   "routes": [
     {
-      "route": "/api/security-tests/encryption",
+      "route": "/api/securityTests/encryptionTest",
       "methods": ["GET", "POST"],
       "rewrite": "/api/securityTests/encryptionTest/index"
     },
     {
-      "route": "/api/security-tests/*",
+      "route": "/api/*",
       "methods": ["GET", "POST"],
-      "rewrite": "/api/securityTests/index"
-    },
-    {
-      "route": "/*",
-      "serve": "/index.html",
-      "statusCode": 200
+      "rewrite": "/api/$1"
     }
   ],
   "navigationFallback": {
