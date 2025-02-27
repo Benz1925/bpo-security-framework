@@ -1,6 +1,6 @@
 const { DefaultAzureCredential } = require('@azure/identity');
 const { SecurityCenter } = require('@azure/arm-security');
-const { TableClient } = require("@azure/data-tables");
+const { TableClient, AzureNamedKeyCredential } = require("@azure/data-tables");
 const { SecretClient } = require('@azure/keyvault-secrets');
 
 module.exports = async function (context, req) {
@@ -17,7 +17,7 @@ module.exports = async function (context, req) {
         let results;
         
         try {
-            // Use Azure credentials to authenticate
+            // Use Azure credentials to authenticate for Security Center
             const credential = new DefaultAzureCredential();
             
             // Create Security Center client
@@ -29,8 +29,8 @@ module.exports = async function (context, req) {
             // Process encryption-related assessments
             results = processEncryptionAssessments(assessments, clientId);
             
-            // Store results in Table Storage
-            await storeTestResults(clientId, results, credential);
+            // Store results in Table Storage using access key authentication
+            await storeTestResultsWithKey(clientId, results);
             
         } catch (azureError) {
             // Log the error but fall back to mock data
@@ -60,6 +60,79 @@ module.exports = async function (context, req) {
         };
     }
 };
+
+// Store test results in Table Storage using access key authentication
+async function storeTestResultsWithKey(clientId, results) {
+    try {
+        // Get storage account credentials from environment
+        const storageAccountName = process.env.STORAGE_ACCOUNT_NAME;
+        const storageAccountKey = process.env.STORAGE_ACCOUNT_KEY;
+        
+        // Check if we have the necessary credentials
+        if (!storageAccountName || !storageAccountKey) {
+            console.error('Missing storage account credentials in environment variables');
+            return;
+        }
+        
+        // Create credential using access key
+        const credential = new AzureNamedKeyCredential(storageAccountName, storageAccountKey);
+        
+        // Create table client
+        const tableClient = new TableClient(
+            `https://${storageAccountName}.table.core.windows.net`,
+            "securityTestResults",
+            credential
+        );
+        
+        // Create entity
+        const entity = {
+            partitionKey: clientId,
+            rowKey: new Date().toISOString().replace(/[:.]/g, ''),
+            testType: results.testType,
+            success: results.success,
+            score: results.details.overallScore,
+            results: JSON.stringify(results)
+        };
+        
+        // Store in table
+        await tableClient.createEntity(entity);
+        console.log('Successfully stored test results in table storage');
+    } catch (error) {
+        // Log error but don't fail the request
+        console.error('Error storing test results with access key:', error);
+    }
+}
+
+// Original storeTestResults function using managed identity (keeping for reference)
+async function storeTestResults(clientId, results, credential) {
+    try {
+        // Get storage account name from environment
+        const storageAccountName = process.env.STORAGE_ACCOUNT_NAME;
+        
+        // Create table client using DefaultAzureCredential
+        const tableClient = new TableClient(
+            `https://${storageAccountName}.table.core.windows.net`,
+            "securityTestResults",
+            credential
+        );
+        
+        // Create entity
+        const entity = {
+            partitionKey: clientId,
+            rowKey: new Date().toISOString().replace(/[:.]/g, ''),
+            testType: results.testType,
+            success: results.success,
+            score: results.details.overallScore,
+            results: JSON.stringify(results)
+        };
+        
+        // Store in table
+        await tableClient.createEntity(entity);
+    } catch (error) {
+        // Log error but don't fail the request
+        console.error('Error storing test results:', error);
+    }
+}
 
 // Process Azure Security Center assessments for encryption
 function processEncryptionAssessments(assessments, clientId) {
@@ -114,37 +187,6 @@ function processEncryptionAssessments(assessments, clientId) {
             nextTestDate: getNextTestDate()
         }
     };
-}
-
-// Store test results in Table Storage
-async function storeTestResults(clientId, results, credential) {
-    try {
-        // Get storage account name from environment
-        const storageAccountName = process.env.STORAGE_ACCOUNT_NAME;
-        
-        // Create table client using DefaultAzureCredential
-        const tableClient = new TableClient(
-            `https://${storageAccountName}.table.core.windows.net`,
-            "securityTestResults",
-            credential
-        );
-        
-        // Create entity
-        const entity = {
-            partitionKey: clientId,
-            rowKey: new Date().toISOString().replace(/[:.]/g, ''),
-            testType: results.testType,
-            success: results.success,
-            score: results.details.overallScore,
-            results: JSON.stringify(results)
-        };
-        
-        // Store in table
-        await tableClient.createEntity(entity);
-    } catch (error) {
-        // Log error but don't fail the request
-        console.error('Error storing test results:', error);
-    }
 }
 
 // This function simulates a real encryption test
