@@ -1,5 +1,7 @@
 const { DefaultAzureCredential } = require('@azure/identity');
 const { SecurityCenter } = require('@azure/arm-security');
+const { TableClient } = require("@azure/data-tables");
+const { SecretClient } = require('@azure/keyvault-secrets');
 
 module.exports = async function (context, req) {
     context.log('Encryption Security Test API triggered');
@@ -8,13 +10,33 @@ module.exports = async function (context, req) {
         // Get client ID from request or use default
         const clientId = req.body && req.body.clientId ? req.body.clientId : '1';
         
-        // In a real implementation, you would:
-        // 1. Use Azure credentials to authenticate
-        // 2. Call Azure Security Center APIs
-        // 3. Process and return real results
+        // Get subscription ID from environment
+        const subscriptionId = process.env.AZURE_SUBSCRIPTION_ID;
         
-        // For demo purposes, we'll simulate a real API call with realistic data
-        const results = await simulateEncryptionTest(clientId);
+        // Use fallback to mock data if we can't connect to Azure
+        let results;
+        
+        try {
+            // Use Azure credentials to authenticate
+            const credential = new DefaultAzureCredential();
+            
+            // Create Security Center client
+            const securityCenterClient = new SecurityCenter(credential, subscriptionId);
+            
+            // Get security assessments
+            const assessments = await securityCenterClient.assessments.list();
+            
+            // Process encryption-related assessments
+            results = processEncryptionAssessments(assessments, clientId);
+            
+            // Store results in Table Storage
+            await storeTestResults(clientId, results, credential);
+            
+        } catch (azureError) {
+            // Log the error but fall back to mock data
+            context.log.error('Error connecting to Azure services:', azureError);
+            results = simulateEncryptionTest(clientId);
+        }
         
         context.res = {
             status: 200,
@@ -39,15 +61,97 @@ module.exports = async function (context, req) {
     }
 };
 
-// This function simulates a real encryption test
-// In production, replace with actual Azure Security Center API calls
-async function simulateEncryptionTest(clientId) {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+// Process Azure Security Center assessments for encryption
+function processEncryptionAssessments(assessments, clientId) {
+    // Filter for encryption-related assessments
+    const encryptionAssessments = assessments.filter(assessment => {
+        return assessment.displayName && (
+            assessment.displayName.toLowerCase().includes('encrypt') ||
+            assessment.displayName.toLowerCase().includes('tls') ||
+            assessment.displayName.toLowerCase().includes('key vault')
+        );
+    });
     
+    // If no encryption assessments found, return mock data
+    if (encryptionAssessments.length === 0) {
+        return simulateEncryptionTest(clientId);
+    }
+    
+    // Map to our checkpoint format
+    const checkpoints = encryptionAssessments.map(assessment => {
+        return {
+            name: assessment.displayName || 'Unknown Assessment',
+            status: assessment.status === 'Healthy',
+            details: assessment.description || 'No description available',
+            severity: mapSeverity(assessment.severity)
+        };
+    });
+    
+    // Generate recommendations based on failed checkpoints
+    const recommendations = encryptionAssessments
+        .filter(assessment => assessment.status !== 'Healthy')
+        .map(assessment => {
+            return {
+                title: `Remediate: ${assessment.displayName || 'Unknown Assessment'}`,
+                description: assessment.remediation || 'Follow Azure security best practices',
+                priority: mapSeverity(assessment.severity),
+                link: 'https://portal.azure.com'
+            };
+        });
+    
+    return {
+        success: checkpoints.every(cp => cp.status),
+        testType: 'encryption',
+        timestamp: new Date().toISOString(),
+        clientId: clientId,
+        details: {
+            title: 'Data Encryption Test',
+            description: 'Verifies that all sensitive data is properly encrypted at rest and in transit.',
+            checkpoints: checkpoints,
+            recommendations: recommendations,
+            overallScore: calculateScore(checkpoints),
+            complianceStatus: checkpoints.every(cp => cp.status) ? 'Compliant' : 'Non-compliant',
+            nextTestDate: getNextTestDate()
+        }
+    };
+}
+
+// Store test results in Table Storage
+async function storeTestResults(clientId, results, credential) {
+    try {
+        // Get storage account name from environment
+        const storageAccountName = process.env.STORAGE_ACCOUNT_NAME;
+        
+        // Create table client using DefaultAzureCredential
+        const tableClient = new TableClient(
+            `https://${storageAccountName}.table.core.windows.net`,
+            "securityTestResults",
+            credential
+        );
+        
+        // Create entity
+        const entity = {
+            partitionKey: clientId,
+            rowKey: new Date().toISOString().replace(/[:.]/g, ''),
+            testType: results.testType,
+            success: results.success,
+            score: results.details.overallScore,
+            results: JSON.stringify(results)
+        };
+        
+        // Store in table
+        await tableClient.createEntity(entity);
+    } catch (error) {
+        // Log error but don't fail the request
+        console.error('Error storing test results:', error);
+    }
+}
+
+// This function simulates a real encryption test
+// Used as fallback when Azure services are not available
+async function simulateEncryptionTest(clientId) {
     // Generate deterministic results based on clientId
-    // This ensures consistent results for the same client
-    const clientSeed = parseInt(clientId, 10);
+    const clientSeed = parseInt(clientId, 10) || 1;
     const success = clientSeed % 3 !== 0; // 2/3 chance of success
     
     // Create realistic test results
@@ -131,7 +235,8 @@ async function simulateEncryptionTest(clientId) {
             recommendations: recommendations,
             overallScore: calculateScore(checkpoints),
             complianceStatus: success ? 'Compliant' : 'Non-compliant',
-            nextTestDate: getNextTestDate()
+            nextTestDate: getNextTestDate(),
+            isMockData: true
         }
     };
 }
@@ -142,6 +247,16 @@ function determineBooleanResult(seed, offset, defaultSuccess) {
         return (seed + offset) % 10 < 8; // 80% true if overall success
     } else {
         return (seed + offset) % 10 < 3; // 30% true if overall failure
+    }
+}
+
+// Map Azure severity to our severity levels
+function mapSeverity(azureSeverity) {
+    switch(azureSeverity) {
+        case 'High': return 'critical';
+        case 'Medium': return 'high';
+        case 'Low': return 'medium';
+        default: return 'low';
     }
 }
 
