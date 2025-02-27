@@ -26,31 +26,93 @@ const SecurityDashboard = ({ client }) => {
   // Use this to track if component is mounted (client-side only)
   const [isMounted, setIsMounted] = useState(false);
   
-  // Set isMounted to true when component mounts (client-side only)
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   // Check if we should use mock data from config - only run on client
   const shouldUseMockData = () => {
-    if (isMounted && typeof window !== 'undefined' && window.APP_CONFIG) {
+    // Always return true during server-side rendering to avoid hydration errors
+    if (!isMounted) return true;
+    
+    if (typeof window !== 'undefined' && window.APP_CONFIG) {
       console.log("APP_CONFIG detected:", window.APP_CONFIG);
       return window.APP_CONFIG.useMockApi === true;
     }
-    return true; // Default to mock data to avoid hydration errors
+    
+    // Default to mock data if config is not available
+    return true;
   };
+  
+  // Function to generate mock dashboard data
+  const generateMockDashboardData = (errorMessage = null) => {
+    console.log("Generating mock dashboard data", errorMessage ? `due to error: ${errorMessage}` : "");
+    const testTypes = ['encryption', 'access', 'dataProtection', 'compliance'];
+    const results = {};
+    let totalScore = 0;
+    let criticalCount = 0;
+    
+    // Use client ID as seed for deterministic results
+    const clientId = client?.id || '1';
+    
+    // Generate mock results for each test type
+    for (const testType of testTypes) {
+      // Use deterministic success based on client ID and test type
+      const success = ((parseInt(clientId) + testType.length) % 3) !== 0;
+      const mockDetails = getMockTestDetails(testType, success, clientId);
+      results[testType] = {
+        success,
+        testType,
+        timestamp: new Date().toISOString(),
+        details: mockDetails,
+        isMock: true
+      };
+      
+      // Add to total score (deterministic score based on client ID)
+      const score = mockDetails.overallScore;
+      totalScore += score;
+      
+      // Count critical issues
+      if (mockDetails.recommendations) {
+        const criticalRecs = Array.isArray(mockDetails.recommendations) 
+          ? mockDetails.recommendations.filter(rec => 
+              typeof rec === 'object' && (rec.priority === 'critical' || rec.priority === 'high')
+            )
+          : [];
+        criticalCount += criticalRecs.length;
+      }
+    }
+    
+    // Calculate overall score
+    const overallScore = Math.round(totalScore / testTypes.length);
+    
+    setDashboardData({
+      overallScore,
+      testResults: results,
+      criticalIssues: criticalCount,
+      lastUpdated: new Date().toISOString(),
+      isLoading: false,
+      error: errorMessage,
+      isMock: true
+    });
+  };
+  
+  // Set isMounted to true when component mounts (client-side only)
+  useEffect(() => {
+    setIsMounted(true);
+    
+    // Generate mock data immediately after mounting to ensure we have data
+    if (typeof window !== 'undefined') {
+      console.log("Component mounted, generating initial mock data");
+      generateMockDashboardData();
+    }
+  }, []);
 
   // Fetch data for the dashboard
   useEffect(() => {
     // Skip this effect during server-side rendering
     if (!isMounted) return;
+    if (!client) return;
+    
+    console.log("Starting dashboard data fetch for client:", client);
     
     const fetchDashboardData = async () => {
-      if (!client) return;
-      
-      console.log("Starting dashboard data fetch for client:", client);
-      setDashboardData(prev => ({ ...prev, isLoading: true, error: null }));
-      
       // Check if we should use mock data immediately
       if (shouldUseMockData()) {
         console.log("Mock mode enabled in config, using mock data immediately");
@@ -58,11 +120,13 @@ const SecurityDashboard = ({ client }) => {
         return;
       }
       
+      setDashboardData(prev => ({ ...prev, isLoading: true, error: null }));
+      
       // Set a timeout to ensure we don't wait forever
       const timeoutId = setTimeout(() => {
         console.log("API fetch timeout - falling back to mock data");
         generateMockDashboardData("API request timed out");
-      }, isMounted && typeof window !== 'undefined' && window.APP_CONFIG?.apiTimeout ? window.APP_CONFIG.apiTimeout : 5000);
+      }, typeof window !== 'undefined' && window.APP_CONFIG?.apiTimeout ? window.APP_CONFIG.apiTimeout : 5000);
       
       try {
         // Fetch results for each test type
@@ -133,58 +197,6 @@ const SecurityDashboard = ({ client }) => {
         clearTimeout(timeoutId);
         generateMockDashboardData(error.message);
       }
-    };
-    
-    const generateMockDashboardData = (errorMessage = null) => {
-      console.log("Generating mock dashboard data", errorMessage ? `due to error: ${errorMessage}` : "");
-      const testTypes = ['encryption', 'access', 'dataProtection', 'compliance'];
-      const results = {};
-      let totalScore = 0;
-      let criticalCount = 0;
-      
-      // Use client ID as seed for deterministic results
-      const clientId = client?.id || '1';
-      
-      // Generate mock results for each test type
-      for (const testType of testTypes) {
-        // Use deterministic success based on client ID and test type
-        const success = ((parseInt(clientId) + testType.length) % 3) !== 0;
-        const mockDetails = getMockTestDetails(testType, success, clientId);
-        results[testType] = {
-          success,
-          testType,
-          timestamp: new Date().toISOString(),
-          details: mockDetails,
-          isMock: true
-        };
-        
-        // Add to total score (deterministic score based on client ID)
-        const score = mockDetails.overallScore;
-        totalScore += score;
-        
-        // Count critical issues
-        if (mockDetails.recommendations) {
-          const criticalRecs = Array.isArray(mockDetails.recommendations) 
-            ? mockDetails.recommendations.filter(rec => 
-                typeof rec === 'object' && (rec.priority === 'critical' || rec.priority === 'high')
-              )
-            : [];
-          criticalCount += criticalRecs.length;
-        }
-      }
-      
-      // Calculate overall score
-      const overallScore = Math.round(totalScore / testTypes.length);
-      
-      setDashboardData({
-        overallScore,
-        testResults: results,
-        criticalIssues: criticalCount,
-        lastUpdated: new Date().toISOString(),
-        isLoading: false,
-        error: errorMessage,
-        isMock: true
-      });
     };
     
     fetchDashboardData();
