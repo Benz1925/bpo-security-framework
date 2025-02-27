@@ -104,7 +104,7 @@ const TestResultsDetail = ({ testType, result, details }) => {
     <Card className={`${currentStyle.bg} ${currentStyle.border}`}>
       <CardHeader>
         <CardTitle className={`${currentStyle.text}`}>{testDetails.title}</CardTitle>
-        <p className="text-gray-600">{testDetails.description}</p>
+        <p className="text-gray-800">{testDetails.description}</p>
       </CardHeader>
       <CardContent>
         <div className="mb-4">
@@ -136,7 +136,7 @@ const TestResultsDetail = ({ testType, result, details }) => {
           
           <ul className="space-y-1 list-disc pl-5">
             {testDetails.recommendations.map((rec, index) => (
-              <li key={index} className="text-gray-700">{rec}</li>
+              <li key={index} className="text-gray-900">{rec}</li>
             ))}
           </ul>
         </div>
