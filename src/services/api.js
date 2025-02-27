@@ -26,7 +26,7 @@ const shouldUseMockData = () => {
 // Security Tests API
 export const securityTestsApi = {
   // Run a security test
-  runTest: async (testType) => {
+  runTest: async (testType, clientId = '1') => {
     try {
       // Check if we should use mock data
       if (shouldUseMockData()) {
@@ -50,11 +50,17 @@ export const securityTestsApi = {
       
       // Call the actual API
       try {
-        const response = await fetch(`${API_BASE_URL}/security-tests/${testType}`, {
+        // For encryption tests, use the new dedicated endpoint
+        const endpoint = testType === 'encryption' 
+          ? `${API_BASE_URL}/security-tests/encryption`
+          : `${API_BASE_URL}/security-tests/${testType}`;
+        
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({ clientId })
         });
         
         if (!response.ok) {

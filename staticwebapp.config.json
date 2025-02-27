@@ -1,6 +1,11 @@
 {
   "routes": [
     {
+      "route": "/api/security-tests/encryption",
+      "methods": ["GET", "POST"],
+      "rewrite": "/api/securityTests/encryptionTest/index"
+    },
+    {
       "route": "/api/security-tests/*",
       "methods": ["GET", "POST"],
       "rewrite": "/api/securityTests/index"

@@ -5,7 +5,10 @@ import BPOSecurityTest from "@/components/BPOSecurityTest";
 import LoginForm from "@/components/auth/LoginForm";
 import Navbar from "@/components/layout/Navbar";
 import ClientSelector from "@/components/clients/ClientSelector";
+import SecurityDashboard from "@/components/dashboard/SecurityDashboard";
 import { useAuth } from "@/context/AuthContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart, Shield } from "lucide-react";
 
 // Define types for our data
 interface User {
@@ -25,6 +28,7 @@ interface Client {
 export default function Home() {
   const { login, isAuthenticated } = useAuth();
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   const handleLogin = (userData: User) => {
     login(userData);
@@ -50,7 +54,26 @@ export default function Home() {
           </div>
           
           <div className="lg:col-span-3">
-            <BPOSecurityTest client={selectedClient} />
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+              <TabsList className="mb-4">
+                <TabsTrigger value="dashboard" className="flex items-center gap-1">
+                  <BarChart className="h-4 w-4" />
+                  Dashboard
+                </TabsTrigger>
+                <TabsTrigger value="tests" className="flex items-center gap-1">
+                  <Shield className="h-4 w-4" />
+                  Security Tests
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="dashboard">
+                <SecurityDashboard client={selectedClient} />
+              </TabsContent>
+              
+              <TabsContent value="tests">
+                <BPOSecurityTest client={selectedClient} />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

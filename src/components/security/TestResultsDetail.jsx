@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
-import { Check, X, AlertTriangle, Info } from 'lucide-react';
+import { Check, X, AlertTriangle, Info, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const TestResultsDetail = ({ testType, result, details }) => {
   // If details are provided from the API, use them
@@ -84,11 +85,14 @@ const TestResultsDetail = ({ testType, result, details }) => {
   const totalCheckpoints = testDetails.checkpoints.length;
   const passRate = totalCheckpoints > 0 ? (passedCheckpoints / totalCheckpoints) * 100 : 0;
   
+  // Use API-provided score if available, otherwise calculate
+  const score = testDetails.overallScore || Math.round(passRate);
+  
   // Determine status level
   let statusLevel = 'critical';
-  if (passRate >= 90) statusLevel = 'good';
-  else if (passRate >= 70) statusLevel = 'warning';
-  else if (passRate >= 50) statusLevel = 'moderate';
+  if (score >= 90) statusLevel = 'good';
+  else if (score >= 70) statusLevel = 'warning';
+  else if (score >= 50) statusLevel = 'moderate';
 
   // Status level styling
   const statusStyles = {
@@ -100,29 +104,70 @@ const TestResultsDetail = ({ testType, result, details }) => {
 
   const currentStyle = statusStyles[statusLevel];
 
+  // Get severity badge style
+  const getSeverityBadgeStyle = (severity) => {
+    switch (severity) {
+      case 'critical': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
+      case 'none': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <Card className={`${currentStyle.bg} ${currentStyle.border}`}>
       <CardHeader>
-        <CardTitle className={`${currentStyle.text}`}>{testDetails.title}</CardTitle>
-        <p className="text-gray-800">{testDetails.description}</p>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className={`${currentStyle.text}`}>{testDetails.title}</CardTitle>
+            <p className="text-gray-800 mt-1">{testDetails.description}</p>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold">{score}%</div>
+            <div className={`text-sm ${currentStyle.text}`}>
+              {testDetails.complianceStatus || (result ? 'Compliant' : 'Non-compliant')}
+            </div>
+            {testDetails.nextTestDate && (
+              <div className="text-xs text-gray-600 mt-1">
+                Next test: {testDetails.nextTestDate}
+              </div>
+            )}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
             <h4 className="font-medium">Test Results</h4>
             <span className={`font-medium ${currentStyle.text}`}>
-              {passedCheckpoints}/{totalCheckpoints} Passed ({Math.round(passRate)}%)
+              {passedCheckpoints}/{totalCheckpoints} Passed
             </span>
           </div>
           
           <div className="space-y-2">
             {testDetails.checkpoints.map((checkpoint, index) => (
-              <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
-                <span>{checkpoint.name}</span>
-                {checkpoint.status ? 
-                  <Check className="text-green-500 h-5 w-5" /> : 
-                  <X className="text-red-500 h-5 w-5" />
-                }
+              <div key={index} className="flex items-center justify-between p-3 bg-white rounded border">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{checkpoint.name}</span>
+                    {checkpoint.severity && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${getSeverityBadgeStyle(checkpoint.severity)}`}>
+                        {checkpoint.severity}
+                      </span>
+                    )}
+                  </div>
+                  {checkpoint.details && (
+                    <p className="text-sm text-gray-600 mt-1">{checkpoint.details}</p>
+                  )}
+                </div>
+                <div className="ml-4">
+                  {checkpoint.status ? 
+                    <Check className="text-green-500 h-5 w-5" /> : 
+                    <X className="text-red-500 h-5 w-5" />
+                  }
+                </div>
               </div>
             ))}
           </div>
@@ -134,11 +179,62 @@ const TestResultsDetail = ({ testType, result, details }) => {
             <h4 className="font-medium">Recommendations</h4>
           </div>
           
-          <ul className="space-y-1 list-disc pl-5">
-            {testDetails.recommendations.map((rec, index) => (
-              <li key={index} className="text-gray-900">{rec}</li>
-            ))}
-          </ul>
+          {Array.isArray(testDetails.recommendations) && !testDetails.recommendations[0]?.title ? (
+            // Handle simple string array recommendations (legacy format)
+            <ul className="space-y-1 list-disc pl-5">
+              {testDetails.recommendations.map((rec, index) => (
+                <li key={index} className="text-gray-900">{rec}</li>
+              ))}
+            </ul>
+          ) : (
+            // Handle enhanced recommendation objects
+            <div className="space-y-3">
+              {testDetails.recommendations.map((rec, index) => (
+                <div key={index} className="p-3 bg-white rounded border">
+                  <div className="flex items-center gap-2">
+                    <h5 className="font-medium">{rec.title}</h5>
+                    {rec.priority && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${getSeverityBadgeStyle(rec.priority)}`}>
+                        {rec.priority}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-800 mt-1">{rec.description}</p>
+                  {rec.link && (
+                    <a 
+                      href={rec.link} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-sm text-blue-600 mt-2 hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Learn more
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* Export and Schedule buttons */}
+        <div className="flex gap-2 mt-6">
+          <Button 
+            variant="outline"
+            className="flex items-center gap-1"
+            onClick={() => alert('Export functionality coming soon!')}
+          >
+            <Info className="h-4 w-4" />
+            Export Report
+          </Button>
+          <Button 
+            variant="outline"
+            className="flex items-center gap-1"
+            onClick={() => alert('Scheduling functionality coming soon!')}
+          >
+            <Info className="h-4 w-4" />
+            Schedule Next Test
+          </Button>
         </div>
       </CardContent>
     </Card>
