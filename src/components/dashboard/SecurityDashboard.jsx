@@ -1,18 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, AlertTriangle, Check, X, BarChart, PieChart, Calendar, RefreshCw, TrendingUp, Download } from 'lucide-react';
+import { Shield, AlertTriangle, Check, X, BarChart, PieChart, Calendar, RefreshCw, TrendingUp, Download, Lock, UserCheck, AlertCircle, CheckCircle, ChevronRight } from 'lucide-react';
 import { securityTestsApi } from '@/services/api';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   LineChart, Line, AreaChart, Area, RadarChart, PolarGrid, 
   PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend 
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
 
-const SecurityDashboard = ({ client }) => {
+const SecurityDashboardComponent = ({ client, activeTab, setActiveTab }, ref) => {
+  // Initialize with empty/default values to prevent hydration mismatches
   const [dashboardData, setDashboardData] = useState({
     overallScore: 0,
     testResults: {
@@ -26,22 +28,25 @@ const SecurityDashboard = ({ client }) => {
     isLoading: true,
     error: null,
     isMock: false,
-    // Add historical data for trends
     historicalScores: [],
-    radarData: []
+    radarData: [],
+    nextActions: []
   });
   
-  // Use this to track if component is mounted (client-side only)
+  // Track client-side mounting separately
   const [isMounted, setIsMounted] = useState(false);
   
   // Check if we should use mock data from config - only run on client
   const shouldUseMockData = () => {
-    // Always return true during server-side rendering to avoid hydration errors
+    // Always return true during server-side rendering
     if (!isMounted) return true;
     
-    if (typeof window !== 'undefined' && window.APP_CONFIG) {
-      console.log("APP_CONFIG detected:", window.APP_CONFIG);
-      return window.APP_CONFIG.useMockApi === true;
+    try {
+      if (typeof window !== 'undefined' && window.APP_CONFIG) {
+        return window.APP_CONFIG.useMockApi === true;
+      }
+    } catch (e) {
+      console.error("Error checking APP_CONFIG:", e);
     }
     
     // Default to mock data if config is not available
@@ -50,6 +55,8 @@ const SecurityDashboard = ({ client }) => {
   
   // Function to generate mock dashboard data
   const generateMockDashboardData = (errorMessage = null) => {
+    if (!isMounted) return; // Don't run during SSR
+    
     console.log("Generating mock dashboard data", errorMessage ? `due to error: ${errorMessage}` : "");
     const testTypes = ['encryption', 'access', 'dataProtection', 'compliance'];
     const results = {};
@@ -126,12 +133,15 @@ const SecurityDashboard = ({ client }) => {
       error: errorMessage,
       isMock: true,
       historicalScores,
-      radarData
+      radarData,
+      nextActions: []
     });
   };
   
   // Generate historical data for trend charts
   const generateHistoricalData = (currentScore, clientId) => {
+    if (!isMounted) return []; // Don't run during SSR
+    
     const data = [];
     const now = new Date();
     const seed = parseInt(clientId, 10) || 1;
@@ -163,19 +173,19 @@ const SecurityDashboard = ({ client }) => {
   // Set isMounted to true when component mounts (client-side only)
   useEffect(() => {
     setIsMounted(true);
-    
-    // Generate mock data immediately after mounting to ensure we have data
-    if (typeof window !== 'undefined') {
-      console.log("Component mounted, generating initial mock data");
+  }, []);
+
+  // Generate initial data after mounting
+  useEffect(() => {
+    if (isMounted) {
       generateMockDashboardData();
     }
-  }, []);
+  }, [isMounted]);
 
   // Fetch data for the dashboard
   useEffect(() => {
-    // Skip this effect during server-side rendering
-    if (!isMounted) return;
-    if (!client) return;
+    // Skip this effect during server-side rendering or if client is not available
+    if (!isMounted || !client) return;
     
     console.log("Starting dashboard data fetch for client:", client);
     
@@ -286,7 +296,8 @@ const SecurityDashboard = ({ client }) => {
           error: null,
           isMock: !apiSucceeded,
           historicalScores,
-          radarData
+          radarData,
+          nextActions: []
         });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -312,6 +323,11 @@ const SecurityDashboard = ({ client }) => {
       }
     }, 100);
   };
+
+  // Expose refreshDashboard to parent component
+  useImperativeHandle(ref, () => ({
+    refreshDashboard
+  }));
 
   // Get status color based on score
   const getStatusColor = (score) => {
@@ -340,11 +356,15 @@ const SecurityDashboard = ({ client }) => {
   // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return 'Never';
-    const date = new Date(dateString);
-    return date.toLocaleString();
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString();
+    } catch (e) {
+      return 'Invalid date';
+    }
   };
 
-  // If not mounted yet (server-side), render a simple placeholder
+  // Server-side rendering or initial client render before hydration
   if (!isMounted) {
     return (
       <div className="space-y-4">
@@ -366,229 +386,382 @@ const SecurityDashboard = ({ client }) => {
     );
   }
 
+  // Client-side rendering after hydration
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="w-6 h-6 text-blue-600" />
-            Security Dashboard
-            {dashboardData.isMock && (
-              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full ml-2">
-                Mock Data
-              </span>
-            )}
-          </CardTitle>
+      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center">
+            <Shield className="w-5 h-5 mr-2 text-blue-600" />
+            <h2 className="text-xl font-bold text-gray-800">Security Dashboard</h2>
+          </div>
           <Button 
-            variant="outline" 
-            size="sm" 
             onClick={refreshDashboard}
             disabled={dashboardData.isLoading}
+            variant="outline" 
+            size="sm"
             className="flex items-center gap-1"
           >
             <RefreshCw className={`h-4 w-4 ${dashboardData.isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            Refresh Dashboard
           </Button>
-        </CardHeader>
-        <CardContent>
-          {dashboardData.isLoading ? (
-            <div className="text-center py-8">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-              <p>Loading dashboard data...</p>
+        </div>
+        <p className="text-gray-500 text-sm">
+          Overview of security status and compliance
+        </p>
+      </div>
+      
+      {/* Alerts Section */}
+      {dashboardData.isLoading && (
+        <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
+          <div className="flex flex-col items-center">
+            <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+            <span className="text-sm text-gray-500">Loading dashboard data...</span>
+          </div>
+        </div>
+      )}
+
+      {dashboardData.error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {dashboardData.error}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
+        {/* Overall Security Score */}
+        <Card className="col-span-1 shadow-md border-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Overall Security</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-col items-center justify-center h-full py-4">
+              <div className="relative h-32 w-32">
+                <svg className="h-full w-full" viewBox="0 0 100 100">
+                  <circle 
+                    cx="50" 
+                    cy="50" 
+                    r="45" 
+                    fill="none" 
+                    stroke="#f1f5f9" 
+                    strokeWidth="10"
+                  />
+                  <circle 
+                    cx="50" 
+                    cy="50" 
+                    r="45" 
+                    fill="none" 
+                    stroke={getScoreColor(dashboardData?.overallScore || 0)} 
+                    strokeWidth="10"
+                    strokeDasharray="283"
+                    strokeDashoffset={283 - (283 * ((dashboardData?.overallScore || 0) / 100))}
+                    transform="rotate(-90 50 50)"
+                    style={{ transition: 'all 0.5s ease' }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-3xl font-bold">{dashboardData?.overallScore || 0}</span>
+                  <span className="text-sm text-gray-500">out of 100</span>
+                </div>
+              </div>
+              <span className="text-base font-medium mt-3 text-center">
+                {getScoreLabel(dashboardData?.overallScore || 0)}
+              </span>
             </div>
-          ) : dashboardData.error ? (
-            <div className="space-y-4">
-              <Alert variant="destructive">
-                <AlertDescription className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  API connection issue: {dashboardData.error}
-                </AlertDescription>
-              </Alert>
-              
-              <p className="text-sm text-gray-500 mb-4">Showing mock data instead</p>
-              
-              {/* Display mock data anyway */}
-              {renderDashboardContent()}
+          </CardContent>
+        </Card>
+
+        {/* Category Security Scores */}
+        <SecurityScoreCard 
+          title="Encryption"
+          score={`${dashboardData?.testResults?.encryption?.details?.overallScore || 0}%`}
+          status={dashboardData?.testResults?.encryption?.success}
+          icon={<Lock className="h-4 w-4 text-blue-600" />}
+        />
+        <SecurityScoreCard 
+          title="Access Control"
+          score={`${dashboardData?.testResults?.access?.details?.overallScore || 0}%`}
+          status={dashboardData?.testResults?.access?.success}
+          icon={<UserCheck className="h-4 w-4 text-green-600" />}
+        />
+        <SecurityScoreCard 
+          title="Data Protection"
+          score={`${dashboardData?.testResults?.dataProtection?.details?.overallScore || 0}%`}
+          status={dashboardData?.testResults?.dataProtection?.success}
+          icon={<Shield className="h-4 w-4 text-purple-600" />}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* Security Score Trend */}
+        <Card className="shadow-md border-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Security Score Trend</CardTitle>
+            <CardDescription>Last 6 months</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[200px] w-full">
+              {/* Replace with your chart component */}
+              <AreaChart 
+                data={dashboardData?.historicalScores || []} 
+                index="date"
+                categories={["score"]}
+                colors={[getChartColor(dashboardData?.overallScore || 0)]}
+                valueFormatter={(value) => `${value}%`}
+                showLegend={false}
+                showGridLines={false}
+                showAnimation={true}
+                className="h-full"
+              />
             </div>
-          ) : (
-            renderDashboardContent()
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Security Assessment Categories */}
+        <Card className="shadow-md border-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Security Assessment</CardTitle>
+            <CardDescription>By category</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[200px] w-full">
+              {/* Replace with radar chart */}
+              <RadarChart 
+                data={[
+                  {
+                    category: "Encryption",
+                    score: dashboardData?.testResults?.encryption?.details?.overallScore || 0
+                  },
+                  {
+                    category: "Access Control",
+                    score: dashboardData?.testResults?.access?.details?.overallScore || 0
+                  },
+                  {
+                    category: "Data Protection",
+                    score: dashboardData?.testResults?.dataProtection?.details?.overallScore || 0
+                  },
+                  {
+                    category: "Compliance",
+                    score: dashboardData?.testResults?.compliance?.details?.overallScore || 0
+                  }
+                ]}
+                index="category"
+                categories={["score"]}
+                colors={["#2563eb"]}
+                valueFormatter={(value) => `${value}%`}
+                className="h-full"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Critical Security Issues */}
+        <Card className="shadow-md border-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Critical Security Issues
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {getAllCriticalIssues(dashboardData).length > 0 ? (
+              <div className="space-y-3">
+                {getAllCriticalIssues(dashboardData).slice(0, 5).map((issue, index) => (
+                  <div 
+                    key={index} 
+                    className="p-3 bg-white border border-gray-100 rounded-md shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-full ${issue.priority === 'critical' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'} flex-shrink-0 mt-0.5`}>
+                        <AlertTriangle className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium text-gray-800 text-sm">{issue.title}</h4>
+                          <span className={`text-xs px-2 py-1 rounded-full ml-2 flex-shrink-0 ${issue.priority === 'critical' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {issue.priority}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{issue.description}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-xs text-gray-500">{issue.testType} security</span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-800 h-8 px-2"
+                          >
+                            Remediate <ChevronRight className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="bg-green-100 text-green-800 p-3 rounded-full mb-3">
+                  <CheckCircle className="h-6 w-6" />
+                </div>
+                <h3 className="text-base font-medium text-gray-800">No Critical Issues</h3>
+                <p className="text-sm text-gray-500 max-w-xs mt-1">
+                  Great job! Your security configuration has no critical issues.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Next Security Actions */}
+        <Card className="shadow-md border-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-blue-500" />
+              Next Security Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-3">
+              {dashboardData?.nextActions && dashboardData.nextActions.length > 0 ? (
+                dashboardData.nextActions.map((action, index) => (
+                  <div key={index} className="p-3 bg-white border border-gray-100 rounded-md shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-blue-100 text-blue-700 p-2 rounded-full flex-shrink-0 mt-0.5">
+                        <Calendar className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-800 text-sm">{action.title}</h4>
+                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{action.description}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-xs text-gray-500">Due: {action.dueDate}</span>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="text-xs h-8 px-2"
+                          >
+                            Schedule
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="bg-blue-100 text-blue-800 p-3 rounded-full mb-3">
+                    <CheckCircle className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-base font-medium text-gray-800">No Pending Actions</h3>
+                  <p className="text-sm text-gray-500 max-w-xs mt-1">
+                    You're all caught up with security actions.
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
+};
+
+// Wrap with forwardRef
+const SecurityDashboard = forwardRef(SecurityDashboardComponent);
+
+// Security Score Card Component
+const SecurityScoreCard = ({ title, score, status, icon }) => {
+  // Status can be true (pass), false (fail), or null (not tested)
+  const getStatusColor = () => {
+    if (status === null) return 'bg-gray-100';
+    return status ? 'bg-green-100' : 'bg-red-100';
+  };
+
+  const getTextColor = () => {
+    if (status === null) return 'text-gray-500';
+    return status ? 'text-green-700' : 'text-red-700';
+  };
+
+  const getStatusText = () => {
+    if (status === null) return 'Not Tested';
+    return status ? 'Passed' : 'Failed';
+  };
+
+  return (
+    <Card className={`border-none shadow-md ${getStatusColor()}`}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-gray-500 flex items-center gap-2">
+          {icon}
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col items-center">
+          <div className="text-3xl font-bold">{score}</div>
+          <div className={`text-sm font-medium mt-1 ${getTextColor()}`}>
+            {getStatusText()}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Helper function to get color based on score
+const getScoreColor = (score) => {
+  if (score >= 90) return '#10B981'; // Green for excellent
+  if (score >= 70) return '#60A5FA'; // Blue for good
+  if (score >= 50) return '#F59E0B'; // Yellow for average
+  return '#EF4444'; // Red for poor
+};
+
+// Helper function to get label based on score
+const getScoreLabel = (score) => {
+  if (score >= 90) return 'Excellent';
+  if (score >= 70) return 'Good';
+  if (score >= 50) return 'Average';
+  return 'Needs Attention';
+};
+
+// Get all critical issues from dashboard data
+const getAllCriticalIssues = (data) => {
+  // If no data is provided, return an empty array
+  if (!data) return [];
   
-  function renderDashboardContent() {
-    return (
-      <>
-        {/* Overall Security Score */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className={`col-span-1 p-4 rounded-lg ${getStatusBgColor(dashboardData.overallScore)} border`}>
-            <div className="text-center">
-              <h3 className="text-lg font-medium mb-2">Overall Security Score</h3>
-              <div className={`text-4xl font-bold ${getStatusColor(dashboardData.overallScore)}`}>
-                {dashboardData.overallScore}%
-              </div>
-              <p className="text-sm text-gray-600 mt-2">
-                Last updated: {formatDate(dashboardData.lastUpdated)}
-              </p>
-            </div>
-          </div>
-          
-          <div className="col-span-1 p-4 rounded-lg bg-white border">
-            <div className="text-center">
-              <h3 className="text-lg font-medium mb-2">Critical Issues</h3>
-              <div className="text-4xl font-bold text-red-600">
-                {dashboardData.criticalIssues}
-              </div>
-              <p className="text-sm text-gray-600 mt-2">
-                Issues requiring immediate attention
-              </p>
-            </div>
-          </div>
-          
-          <div className="col-span-1 p-4 rounded-lg bg-white border">
-            <div className="text-center">
-              <h3 className="text-lg font-medium mb-2">Client</h3>
-              <div className="text-xl font-bold">
-                {client?.name || 'All Clients'}
-              </div>
-              <p className="text-sm text-gray-600 mt-2">
-                {client?.industry || 'Multiple Industries'}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        {/* Security Score Trend Chart */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
-            Security Score Trend
-          </h3>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={dashboardData.historicalScores}
-                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={getChartColor(dashboardData.overallScore)} stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor={getChartColor(dashboardData.overallScore)} stopOpacity={0.1}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" />
-                    <YAxis domain={[0, 100]} />
-                    <Tooltip 
-                      formatter={(value) => [`${value}%`, 'Score']}
-                      labelFormatter={(label) => `Month: ${label}`}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="score" 
-                      stroke={getChartColor(dashboardData.overallScore)} 
-                      fillOpacity={1} 
-                      fill="url(#colorScore)" 
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Security Radar Chart and Test Results Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Radar Chart */}
-          <div>
-            <h3 className="text-lg font-medium mb-3">Security Coverage</h3>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart outerRadius="80%" data={dashboardData.radarData}>
-                      <PolarGrid />
-                      <PolarAngleAxis dataKey="subject" />
-                      <PolarRadiusAxis domain={[0, 100]} />
-                      <Radar
-                        name="Security Score"
-                        dataKey="score"
-                        stroke="#2563eb"
-                        fill="#2563eb"
-                        fillOpacity={0.5}
-                      />
-                      <Tooltip formatter={(value) => [`${value}%`, 'Score']} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Test Results Summary */}
-          <div>
-            <h3 className="text-lg font-medium mb-3">Security Tests Summary</h3>
-            <div className="space-y-3">
-              {Object.entries(dashboardData.testResults).map(([testType, result]) => {
-                if (!result) return null;
-                
-                const score = result.details?.overallScore || 0;
-                const statusColor = getStatusColor(score);
-                const statusBg = getStatusBgColor(score);
-                
-                return (
-                  <div key={testType} className={`p-4 rounded-lg border ${statusBg}`}>
-                    <div className="flex justify-between items-center">
-                      <h4 className="font-medium">
-                        {result.details?.title || testType.charAt(0).toUpperCase() + testType.slice(1)}
-                      </h4>
-                      <div className={`font-bold ${statusColor}`}>
-                        {score}%
-                      </div>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-sm text-gray-600">
-                        Status: {result.details?.complianceStatus || (result.success ? 'Passed' : 'Failed')}
-                      </span>
-                      {result.success ? 
-                        <Check className="text-green-500 h-5 w-5" /> : 
-                        <X className="text-red-500 h-5 w-5" />
-                      }
-                    </div>
-                    {result.details?.recommendations && (
-                      <div className="mt-2 text-sm text-gray-600">
-                        {Array.isArray(result.details.recommendations) ? result.details.recommendations.length : 0} recommendation(s)
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-        
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-2">
-          <Button className="flex items-center gap-1">
-            <BarChart className="h-4 w-4" />
-            View Detailed Reports
-          </Button>
-          <Button variant="outline" className="flex items-center gap-1">
-            <Download className="h-4 w-4" />
-            Export Dashboard
-          </Button>
-          <Button variant="outline" className="flex items-center gap-1">
-            <Calendar className="h-4 w-4" />
-            Schedule Tests
-          </Button>
-        </div>
-      </>
-    );
+  const allIssues = [];
+  
+  // Only process if the necessary data structures exist
+  if (data && data.testResults) {
+    // Process each test category
+    Object.keys(data.testResults).forEach(testKey => {
+      const test = data.testResults[testKey];
+      
+      // Skip if test details or recommendations don't exist
+      if (!test || !test.details || !test.details.recommendations) return;
+      
+      // Add critical and high priority recommendations to the list
+      test.details.recommendations.forEach(rec => {
+        if (rec.priority && ['critical', 'high'].includes(rec.priority.toLowerCase())) {
+          allIssues.push({
+            ...rec,
+            testType: testKey,
+            id: `${testKey}-${allIssues.length}`
+          });
+        }
+      });
+    });
   }
+  
+  // Sort by priority (critical first, then high)
+  return allIssues.sort((a, b) => {
+    if (a.priority.toLowerCase() === 'critical' && b.priority.toLowerCase() !== 'critical') return -1;
+    if (a.priority.toLowerCase() !== 'critical' && b.priority.toLowerCase() === 'critical') return 1;
+    return 0;
+  });
 };
 
 // Helper function to generate mock test details with deterministic values

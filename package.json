@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "export": "next export",
+    "build:azure": "npm run prebuild && next build",
     "build:api": "cd api && npm install"
   },
   "dependencies": {

@@ -55,7 +55,7 @@
   },
   "globalHeaders": {
     "content-security-policy": "default-src https: 'unsafe-eval' 'unsafe-inline'; object-src 'none'",
-    "cache-control": "no-cache",
+    "cache-control": "no-store, must-revalidate",
     "X-Frame-Options": "DENY",
     "X-Content-Type-Options": "nosniff"
   },

@@ -1,69 +1,347 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Direct API Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPO Security Framework Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root {
+            --primary-color: #0d6efd;
+            --secondary-color: #6c757d;
+            --success-color: #198754;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #0dcaf0;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
         }
-        pre {
-            background-color: #f5f5f5;
-            padding: 10px;
-            border-radius: 5px;
-            overflow-x: auto;
-            max-height: 400px;
+        
+        .dashboard-header {
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
         }
-        button {
-            padding: 10px 15px;
-            background-color: #0078d4;
-            color: white;
+        
+        .card {
             border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 10px;
-            margin-right: 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s;
         }
-        button:hover {
-            background-color: #0062ad;
+        
+        .card:hover {
+            transform: translateY(-5px);
         }
-        input {
-            padding: 8px;
-            width: 100%;
-            margin-bottom: 10px;
+        
+        .card-header {
+            border-bottom: none;
+            background-color: transparent;
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
         }
-        .button-group {
+        
+        .score-circle {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            border-radius: 50%;
             display: flex;
-            margin-bottom: 20px;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            position: relative;
+            background: conic-gradient(var(--success-color) 0%, var(--success-color) 70%, var(--danger-color) 70%, var(--danger-color) 100%);
+        }
+        
+        .score-circle-inner {
+            background-color: white;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+        
+        .checkpoint-item {
+            padding: 12px 15px;
+            border-left: 4px solid transparent;
+            margin-bottom: 8px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .checkpoint-item:hover {
+            background-color: #e9ecef;
+        }
+        
+        .checkpoint-pass {
+            border-left-color: var(--success-color);
+        }
+        
+        .checkpoint-fail {
+            border-left-color: var(--danger-color);
+        }
+        
+        .severity-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 50px;
+        }
+        
+        .severity-critical {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .severity-high {
+            background-color: #fd7e14;
+            color: white;
+        }
+        
+        .severity-medium {
+            background-color: #ffc107;
+            color: black;
+        }
+        
+        .severity-low {
+            background-color: #20c997;
+            color: white;
+        }
+        
+        .severity-none {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .recommendations-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255,255,255,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            border-radius: 10px;
+        }
+        
+        .api-url-display {
+            font-family: monospace;
+            background-color: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        /* Animation for loading spinner */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .spinner {
+            border: 5px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 5px solid var(--primary-color);
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        
+        .test-timestamp {
+            font-size: 0.8rem;
+            color: #6c757d;
         }
     </style>
 </head>
 <body>
-    <h1>Direct API Testing Tool</h1>
-    
-    <div>
-        <h2>Base URL</h2>
-        <input type="text" id="baseUrl" value="https://lively-forest-016623d0f4.azurestaticapps.net">
-        
-        <h2>Test Endpoints</h2>
-        <div class="button-group">
-            <button onclick="testAPI('/api/test')">Test Regular API</button>
-            <button onclick="testAPI('/api/security-tests/encryption')">Test Encryption API</button>
-            <button onclick="testAPI('/api/security-tests/encryption-simple')">Test Simple Encryption API</button>
+    <header class="dashboard-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="mb-0">BPO Security Framework</h1>
+                    <p class="text-muted mb-0">Security Assessment Dashboard</p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="input-group">
+                        <input type="text" id="baseUrl" class="form-control" value="https://lively-forest-016623d0f4.azurestaticapps.net">
+                        <button class="btn btn-outline-secondary" type="button" onclick="updateBaseUrl()">Update URL</button>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <h3>Response:</h3>
-        <pre id="result">Click one of the buttons above to test an endpoint</pre>
+    </header>
+
+    <div class="container mb-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0">Security Tests</h5>
+                            <div>
+                                <button class="btn btn-primary me-2" onclick="testAPI('/api/security-tests/encryption')">
+                                    <i class="fas fa-lock me-1"></i> Run Encryption Test
+                                </button>
+                                <button class="btn btn-outline-primary me-2" onclick="testAPI('/api/security-tests/encryption-simple')">
+                                    <i class="fas fa-vial me-1"></i> Run Simple Test
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="testAPI('/api/test')">
+                                    <i class="fas fa-code me-1"></i> Test API Connectivity
+                                </button>
+                            </div>
+                        </div>
+                        <div id="apiUrlDisplay" class="api-url-display mb-3">
+                            No API call made yet
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <div class="container mb-5">
+        <div class="row" id="testResultsContainer" style="display: none;">
+            <!-- Security Score Card -->
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Security Score</h5>
+                        <span class="badge bg-info" id="testTimestamp"></span>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="score-circle mb-3" id="scoreCircle">
+                            <div class="score-circle-inner">
+                                <span id="scoreValue">--</span>
+                            </div>
+                        </div>
+                        <h3 id="complianceStatus" class="mt-3">Unknown</h3>
+                        <p class="text-muted" id="nextTestDate">Next assessment: N/A</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Checkpoints Card -->
+            <div class="col-md-8">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Security Checkpoints</h5>
+                        <div>
+                            <span class="badge bg-success me-2" id="passedChecks">0 Passed</span>
+                            <span class="badge bg-danger" id="failedChecks">0 Failed</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="checkpointsList">
+                            <!-- Checkpoints will be added here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendations Section -->
+        <div class="row mt-4" id="recommendationsContainer" style="display: none;">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Security Recommendations</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="recommendationsList" class="recommendations-list">
+                            <!-- Recommendations will be added here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Raw Response Section -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">API Response</h5>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleRawResponse()">
+                            <i class="fas fa-code me-1"></i> Toggle Raw Data
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <pre id="result" class="mb-0" style="display: none;">No data available</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // Global variable to store the last response
+        let lastResponse = null;
+        
+        // Function to toggle raw response visibility
+        function toggleRawResponse() {
+            const resultElement = document.getElementById('result');
+            if (resultElement.style.display === 'none') {
+                resultElement.style.display = 'block';
+            } else {
+                resultElement.style.display = 'none';
+            }
+        }
+        
+        // Function to update base URL
+        function updateBaseUrl() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            alert(`Base URL updated to: ${baseUrl}`);
+        }
+        
+        // Function to test API endpoints
         async function testAPI(endpoint) {
             const baseUrl = document.getElementById('baseUrl').value;
             const apiUrl = baseUrl + endpoint;
             
-            document.getElementById('result').textContent = `Testing ${apiUrl}...`;
+            // Update API URL display
+            document.getElementById('apiUrlDisplay').textContent = `Calling: ${apiUrl}`;
+            
+            // Show loading in the result area
+            document.getElementById('result').textContent = 'Loading...';
+            
+            // Create or get loading overlay for results container
+            let loadingOverlay = document.getElementById('loadingOverlay');
+            if (!loadingOverlay) {
+                loadingOverlay = document.createElement('div');
+                loadingOverlay.id = 'loadingOverlay';
+                loadingOverlay.className = 'loading-overlay';
+                loadingOverlay.innerHTML = '<div class="spinner"></div>';
+                document.body.appendChild(loadingOverlay);
+            }
+            loadingOverlay.style.display = 'flex';
             
             try {
                 // Try to fetch the API
@@ -90,15 +368,165 @@
                     data
                 };
                 
-                // Display result
-                document.getElementById('result').textContent = 
-                    JSON.stringify(result, null, 2);
-                    
+                // Store the response
+                lastResponse = result;
+                
+                // Display raw result
+                document.getElementById('result').textContent = JSON.stringify(result, null, 2);
+                
+                // Show the results containers
+                document.getElementById('testResultsContainer').style.display = 'flex';
+                
+                // Populate the UI with the data
+                populateSecurityDashboard(data);
+                
             } catch (error) {
                 // Handle errors
                 document.getElementById('result').textContent = 
                     `Error: ${error.message}\nAPI URL: ${apiUrl}`;
+                    
+                // Hide the results containers on error
+                document.getElementById('testResultsContainer').style.display = 'none';
+                document.getElementById('recommendationsContainer').style.display = 'none';
+            } finally {
+                // Hide loading overlay
+                loadingOverlay.style.display = 'none';
             }
+        }
+        
+        // Function to populate the security dashboard with data
+        function populateSecurityDashboard(apiResponse) {
+            // Only process if we have the right data structure
+            if (!apiResponse || !apiResponse.data || !apiResponse.data.details) {
+                // This might be the test API or a different format
+                return;
+            }
+            
+            const data = apiResponse.data;
+            const details = data.details;
+            
+            // Update security score
+            const scoreValue = document.getElementById('scoreValue');
+            scoreValue.textContent = details.overallScore || '0';
+            
+            // Update score circle gradient based on score
+            const scoreCircle = document.getElementById('scoreCircle');
+            const score = parseInt(details.overallScore) || 0;
+            let scoreColor = getScoreColor(score);
+            
+            scoreCircle.style.background = `conic-gradient(
+                ${scoreColor} 0%, 
+                ${scoreColor} ${score}%, 
+                #e9ecef ${score}%, 
+                #e9ecef 100%
+            )`;
+            
+            // Update compliance status
+            const complianceStatus = document.getElementById('complianceStatus');
+            complianceStatus.textContent = details.complianceStatus || 'Unknown';
+            
+            if (details.complianceStatus === 'Compliant') {
+                complianceStatus.className = 'mt-3 text-success';
+            } else if (details.complianceStatus === 'Non-compliant') {
+                complianceStatus.className = 'mt-3 text-danger';
+            } else {
+                complianceStatus.className = 'mt-3 text-muted';
+            }
+            
+            // Update next test date
+            const nextTestDate = document.getElementById('nextTestDate');
+            nextTestDate.textContent = `Next assessment: ${details.nextTestDate || 'N/A'}`;
+            
+            // Update timestamp
+            const testTimestamp = document.getElementById('testTimestamp');
+            const timestamp = new Date(data.timestamp);
+            const formattedDate = timestamp.toLocaleDateString();
+            const formattedTime = timestamp.toLocaleTimeString();
+            testTimestamp.textContent = `${formattedDate} ${formattedTime}`;
+            
+            // Update checkpoints
+            const checkpointsList = document.getElementById('checkpointsList');
+            checkpointsList.innerHTML = ''; // Clear existing checkpoints
+            
+            let passedCount = 0;
+            let failedCount = 0;
+            
+            if (details.checkpoints && details.checkpoints.length > 0) {
+                details.checkpoints.forEach(checkpoint => {
+                    if (checkpoint.status) passedCount++;
+                    else failedCount++;
+                    
+                    const checkpointElement = document.createElement('div');
+                    checkpointElement.className = `checkpoint-item ${checkpoint.status ? 'checkpoint-pass' : 'checkpoint-fail'}`;
+                    
+                    checkpointElement.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">${checkpoint.name}</h6>
+                                <p class="mb-0 small text-muted">${checkpoint.details}</p>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="severity-badge severity-${checkpoint.severity}">${capitalizeFirstLetter(checkpoint.severity)}</span>
+                                <span class="ms-2 ${checkpoint.status ? 'text-success' : 'text-danger'}">
+                                    <i class="fas ${checkpoint.status ? 'fa-check-circle' : 'fa-times-circle'}"></i>
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    checkpointsList.appendChild(checkpointElement);
+                });
+                
+                // Update passed/failed counts
+                document.getElementById('passedChecks').textContent = `${passedCount} Passed`;
+                document.getElementById('failedChecks').textContent = `${failedCount} Failed`;
+            }
+            
+            // Update recommendations
+            const recommendationsList = document.getElementById('recommendationsList');
+            recommendationsList.innerHTML = ''; // Clear existing recommendations
+            
+            if (details.recommendations && details.recommendations.length > 0) {
+                details.recommendations.forEach(recommendation => {
+                    const recommendationElement = document.createElement('div');
+                    recommendationElement.className = 'checkpoint-item';
+                    
+                    recommendationElement.innerHTML = `
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-1">${recommendation.title}</h6>
+                                <span class="severity-badge severity-${recommendation.priority}">${capitalizeFirstLetter(recommendation.priority)}</span>
+                            </div>
+                            <p class="mb-2 small text-muted">${recommendation.description}</p>
+                            <a href="${recommendation.link}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-external-link-alt me-1"></i> Learn More
+                            </a>
+                        </div>
+                    `;
+                    
+                    recommendationsList.appendChild(recommendationElement);
+                });
+                
+                // Show recommendations container
+                document.getElementById('recommendationsContainer').style.display = 'block';
+            } else {
+                // Hide recommendations container if no recommendations
+                document.getElementById('recommendationsContainer').style.display = 'none';
+            }
+        }
+        
+        // Helper function to get a color based on score
+        function getScoreColor(score) {
+            if (score >= 90) return 'var(--success-color)';
+            if (score >= 70) return 'var(--info-color)';
+            if (score >= 50) return 'var(--warning-color)';
+            return 'var(--danger-color)';
+        }
+        
+        // Helper function to capitalize first letter
+        function capitalizeFirstLetter(string) {
+            if (!string) return '';
+            return string.charAt(0).toUpperCase() + string.slice(1);
         }
     </script>
 </body>
