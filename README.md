@@ -1,124 +1,113 @@
 # BPO Security Framework
 
-A comprehensive security testing and compliance framework for Business Process Outsourcing (BPO) operations.
+![BPO Security Framework](https://img.shields.io/badge/Status-Prototype-blue)
+![Version](https://img.shields.io/badge/Version-1.0.0-green)
 
-## Deployment Status
+## Overview
 
-Last deployment test: ✅ Successfully deployed on `$(date)`
+BPO Security Framework is a comprehensive security assessment and monitoring solution designed for Business Process Outsourcing (BPO) operations. This application helps security teams monitor, test, and ensure compliance with security standards across client implementations.
 
-## Features
+### 📋 Features
 
-- Security test execution for encryption, access control, data protection, and compliance
-- Detailed test results with checkpoints and recommendations
-- Client management and selection
-- Security alerts and notifications
-- Azure integration for secure authentication and data storage
+- **Security Dashboard**: Visualize security scores and key metrics
+- **Security Tests**: Run detailed tests for encryption, access control, data protection, and compliance
+- **Client Management**: Manage multiple clients with different security requirements
+- **Alert System**: Real-time notifications for security events
+- **Compliance Tracking**: Monitor compliance status across standards
 
-## Local Development
+## 🚀 Demo Version Information
 
-1. Clone the repository
-2. Install dependencies:
-   ```
-   npm install
-   ```
-3. Run the development server:
-   ```
-   npm run dev
-   ```
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+This version uses mock data to demonstrate the UI and functionality. It's designed as a prototype to showcase the application's capabilities without requiring backend API connectivity.
 
-## Deploying to Azure Static Web Apps
+## 📸 Screenshots
+
+*(Add screenshots here)*
+
+## 🛠️ Technologies Used
+
+- **Frontend**: Next.js 13+, React, TailwindCSS
+- **UI Components**: Custom components with Shadcn/UI
+- **Authentication**: Custom auth with Azure AD integration support
+- **API**: Azure Functions with Node.js
+- **Deployment**: Azure Static Web Apps
+
+## 🔧 Setup & Installation
 
 ### Prerequisites
 
-1. An Azure account with an active subscription
-2. A GitHub account
-3. Node.js and npm installed
+- Node.js (v18+)
+- npm or yarn
 
-### Deployment Steps
+### Installation Steps
 
-1. **Create an Azure Static Web App**
-
-   - Go to the [Azure Portal](https://portal.azure.com)
-   - Search for "Static Web Apps" and click "Create"
-   - Fill in the required details:
-     - Subscription: Your Azure subscription
-     - Resource Group: Create new or use existing
-     - Name: Your app name (e.g., bpo-security-framework)
-     - Hosting Plan: Free
-     - Region: Choose the closest region
-     - Source: GitHub
-     - Organization: Your GitHub organization/username
-     - Repository: Select your repository
-     - Branch: main
-
-2. **Configure GitHub Actions**
-
-   The deployment will automatically create a GitHub Actions workflow file in your repository. You can also use the one provided in this repository.
-
-3. **Configure Environment Variables**
-
-   - In the Azure Portal, go to your Static Web App
-   - Navigate to Configuration > Application settings
-   - Add the following settings:
-     - `AZURE_CLIENT_ID`: Your Azure AD application client ID
-     - `AZURE_CLIENT_SECRET`: Your Azure AD application client secret
-     - `NEXT_PUBLIC_API_URL`: The URL of your API (if deployed separately)
-
-4. **Configure Authentication (Optional)**
-
-   - In the Azure Portal, go to your Static Web App
-   - Navigate to Authentication
-   - Configure Azure Active Directory as an identity provider
-
-## Architecture
-
-This application is built with:
-
-- **Frontend**: Next.js, React, Tailwind CSS
-- **API**: Azure Functions
-- **Authentication**: Azure AD
-- **Deployment**: Azure Static Web Apps, GitHub Actions
-
-## Cost-Effective Deployment
-
-This application is designed to be deployed cost-effectively using:
-
-- Azure Static Web Apps (Free tier)
-- Azure Functions (Consumption plan)
-- Azure AD (Free tier)
-
-The estimated monthly cost for a minimal deployment is approximately $5-10.
-
-## Local Development with API
-
-To run the API locally:
-
-1. Install Azure Functions Core Tools:
-   ```
-   npm install -g azure-functions-core-tools@4
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/bpo-security-framework.git
+   cd bpo-security-framework
    ```
 
-2. Navigate to the API directory:
-   ```
-   cd api
-   ```
-
-3. Install dependencies:
-   ```
+2. Install dependencies:
+   ```bash
    npm install
    ```
 
-4. Start the API:
-   ```
-   func start
-   ```
+3. Setup environment variables:
+   - Copy `.env.example` to `.env.local`
+   - Update values as needed
 
-5. In a separate terminal, start the frontend:
-   ```
+4. Start the development server:
+   ```bash
    npm run dev
    ```
 
-## License
+5. Setup API environment (optional):
+   ```bash
+   cd api
+   npm install
+   ```
 
-[MIT](LICENSE)
+6. Run the API locally (optional):
+   ```bash
+   npm start
+   ```
+
+## 💻 Development
+
+### Mock Data vs. Real API
+
+This application is designed to work with both mock data and real API connections:
+
+- Mock data is generated dynamically to simulate real security tests and metrics
+- To use real data, update the service files in `src/services/api.js`
+- Toggle between mock and real data in the `.env` file with `USE_MOCK_DATA=true/false`
+
+### Project Structure
+
+```
+├── api/                  # Azure Functions API
+├── public/               # Static files
+├── src/
+│   ├── app/              # Next.js app router
+│   ├── components/       # React components
+│   ├── context/          # React context providers
+│   ├── lib/              # Utility functions
+│   ├── services/         # API services
+│   ├── styles/           # Global styles
+│   └── types/            # TypeScript type definitions
+```
+
+## 📱 Future Enhancements
+
+- Real-time API integration
+- Advanced security test scenarios
+- Multi-factor authentication
+- Detailed compliance reporting
+- Export capabilities for audit reports
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
