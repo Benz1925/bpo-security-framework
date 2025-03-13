@@ -33,8 +33,16 @@ const Navbar = ({ activeTab, setActiveTab }) => {
               active={activeTab === "tests"}
               onClick={() => setActiveTab("tests")}
             />
-            <NavItem icon={<FileText className="w-4 h-4" />} label="Reports" />
-            <NavItem icon={<Settings className="w-4 h-4" />} label="Settings" />
+            <NavItem 
+              icon={<FileText className="w-4 h-4" />} 
+              label="Reports" 
+              active={activeTab === "reports"}
+              onClick={() => setActiveTab("reports")}
+            />
+            <NavItem 
+              icon={<Settings className="w-4 h-4" />} 
+              label="Settings" 
+            />
           </div>
         </div>
         
@@ -90,8 +98,19 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                 setMobileMenuOpen(false);
               }}
             />
-            <MobileNavItem icon={<FileText className="w-4 h-4" />} label="Reports" />
-            <MobileNavItem icon={<Settings className="w-4 h-4" />} label="Settings" />
+            <MobileNavItem 
+              icon={<FileText className="w-4 h-4" />} 
+              label="Reports" 
+              active={activeTab === "reports"}
+              onClick={() => {
+                setActiveTab("reports");
+                setMobileMenuOpen(false);
+              }}
+            />
+            <MobileNavItem 
+              icon={<Settings className="w-4 h-4" />} 
+              label="Settings" 
+            />
             
             {isAuthenticated && (
               <div className="pt-2 mt-2 border-t border-gray-200">

@@ -7,6 +7,7 @@ import { Shield, AlertTriangle, Check, X, BarChart, PieChart, Calendar, RefreshC
 import { securityTestsApi } from '@/services/api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
+import RemediationModal from './RemediationModal';
 import { 
   LineChart, Line, AreaChart, Area, RadarChart, PolarGrid, 
   PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer,
@@ -33,8 +34,32 @@ const SecurityDashboardComponent = ({ client, activeTab, setActiveTab }, ref) =>
     nextActions: []
   });
   
+  // State for remediation modal
+  const [selectedIssue, setSelectedIssue] = useState(null);
+  
   // Track client-side mounting separately
   const [isMounted, setIsMounted] = useState(false);
+  
+  // Function to handle remediation button click
+  const handleRemediate = (issue) => {
+    setSelectedIssue(issue);
+  };
+  
+  // Function to handle remediation completion
+  const handleRemediationComplete = (remediationData) => {
+    // In a real app, you would update the issue status in your API
+    console.log('Remediation completed:', remediationData);
+    
+    // For demo purposes, we'll update the dashboard data to remove the remediated issue
+    const updatedDashboardData = { ...dashboardData };
+    
+    // Update the critical issues count
+    if (selectedIssue && (selectedIssue.priority === 'critical' || selectedIssue.priority === 'high')) {
+      updatedDashboardData.criticalIssues = Math.max(0, updatedDashboardData.criticalIssues - 1);
+    }
+    
+    setDashboardData(updatedDashboardData);
+  };
   
   // Check if we should use mock data from config - only run on client
   const shouldUseMockData = () => {
@@ -594,6 +619,7 @@ const SecurityDashboardComponent = ({ client, activeTab, setActiveTab }, ref) =>
                             variant="ghost" 
                             size="sm"
                             className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-800 h-8 px-2"
+                            onClick={() => handleRemediate(issue)}
                           >
                             Remediate <ChevronRight className="h-3 w-3" />
                           </Button>
@@ -666,6 +692,15 @@ const SecurityDashboardComponent = ({ client, activeTab, setActiveTab }, ref) =>
           </CardContent>
         </Card>
       </div>
+
+      {/* Render RemediationModal when an issue is selected */}
+      {selectedIssue && (
+        <RemediationModal 
+          issue={selectedIssue}
+          onClose={() => setSelectedIssue(null)}
+          onRemediate={handleRemediationComplete}
+        />
+      )}
     </div>
   );
 };

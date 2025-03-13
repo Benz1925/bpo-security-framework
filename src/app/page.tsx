@@ -6,6 +6,7 @@ import LoginForm from "@/components/auth/LoginForm";
 import Navbar from "@/components/layout/Navbar";
 import ClientSelector from "@/components/clients/ClientSelector";
 import SecurityDashboard from "@/components/dashboard/SecurityDashboard";
+import SecurityReports from "@/components/reports/SecurityReports";
 import AlertNotificationPanel from "@/components/AlertNotificationPanel";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from '@/components/ui/button';
@@ -151,12 +152,24 @@ export default function Home() {
                 activeTab={activeTab} 
                 setActiveTab={setActiveTab} 
               />
-            ) : (
+            ) : activeTab === "tests" ? (
               <BPOSecurityTest 
                 ref={securityTestsRef}
                 client={selectedClient} 
                 hideHeader={true}
                 addAlert={addAlert}
+              />
+            ) : activeTab === "reports" ? (
+              <SecurityReports 
+                client={selectedClient}
+              />
+            ) : (
+              // Default to dashboard if tab is not recognized
+              <SecurityDashboard 
+                ref={dashboardRef}
+                client={selectedClient} 
+                activeTab={activeTab} 
+                setActiveTab={setActiveTab} 
               />
             )}
           </div>
