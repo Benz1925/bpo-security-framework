@@ -37,11 +37,17 @@ const LoginForm = ({ onLogin }) => {
         throw new Error('Please enter both email and password');
       }
       
-      // Mock authentication - in a real app, this would verify against a backend
-      if (credentials.email === 'admin@bpo.com' && credentials.password === 'password123') {
+      // Simple validation for email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(credentials.email)) {
+        throw new Error('Please enter a valid email address');
+      }
+      
+      // For demo purposes, accept any valid formatted email and non-empty password
+      if (credentials.email && credentials.password.length >= 6) {
         const user = {
           id: '1',
-          name: 'Admin User',
+          name: 'User',
           email: credentials.email,
           role: 'admin'
         };
@@ -52,7 +58,7 @@ const LoginForm = ({ onLogin }) => {
         // Call the onLogin callback with the user object
         if (onLogin) onLogin(user);
       } else {
-        throw new Error('Invalid email or password');
+        throw new Error('Password must be at least 6 characters');
       }
     } catch (err) {
       setError(err.message);
@@ -83,7 +89,7 @@ const LoginForm = ({ onLogin }) => {
                 value={credentials.email}
                 onChange={handleChange}
                 className="w-full p-2 border rounded-md"
-                placeholder="admin@bpo.com"
+                placeholder="Enter your email"
               />
             </div>
             
@@ -118,7 +124,7 @@ const LoginForm = ({ onLogin }) => {
           </form>
         </CardContent>
         <CardFooter className="flex justify-center text-sm text-gray-500">
-          <p>Demo credentials: admin@bpo.com / password123</p>
+          <p>Sign in with your BPO credentials</p>
         </CardFooter>
       </Card>
     </div>
