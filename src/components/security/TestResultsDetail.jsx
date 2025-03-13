@@ -85,14 +85,22 @@ const TestResultsDetail = ({ testType, result, details }) => {
   const totalCheckpoints = testDetails.checkpoints.length;
   const passRate = totalCheckpoints > 0 ? (passedCheckpoints / totalCheckpoints) * 100 : 0;
   
-  // Use API-provided score if available, otherwise calculate
-  const score = testDetails.overallScore || Math.round(passRate);
+  // Use API-provided score if available, otherwise calculate based on passed checkpoints
+  // If result is true (passed), ensure score reflects that by using pass rate
+  const score = result ? Math.round(passRate) : 0;
   
   // Determine status level
   let statusLevel = 'critical';
   if (score >= 90) statusLevel = 'good';
   else if (score >= 70) statusLevel = 'warning';
   else if (score >= 50) statusLevel = 'moderate';
+
+  // Determine compliance status based on score and result
+  const complianceStatus = result ? 
+    (score >= 90 ? 'Fully Compliant' : 
+     score >= 70 ? 'Mostly Compliant' : 
+     score >= 50 ? 'Partially Compliant' : 'Minimally Compliant') :
+    'Non-compliant';
 
   // Status level styling
   const statusStyles = {
@@ -127,7 +135,7 @@ const TestResultsDetail = ({ testType, result, details }) => {
           <div className="text-right">
             <div className="text-2xl font-bold">{score}%</div>
             <div className={`text-sm ${currentStyle.text}`}>
-              {testDetails.complianceStatus || (result ? 'Compliant' : 'Non-compliant')}
+              {complianceStatus}
             </div>
             {testDetails.nextTestDate && (
               <div className="text-xs text-gray-600 mt-1">

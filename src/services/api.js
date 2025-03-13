@@ -114,6 +114,27 @@ export const clientsApi = {
 
 // Helper function to generate mock test details
 function getMockTestDetails(testType, success) {
+  // Calculate overall score based on success - successful tests have 75-100% score, failed tests have 0-40% score
+  const getScore = () => {
+    if (success) {
+      return Math.floor(Math.random() * 26) + 75; // 75-100 for successful tests
+    } else {
+      return Math.floor(Math.random() * 41); // 0-40 for failed tests
+    }
+  };
+
+  // Determine compliance status based on score and success
+  const getComplianceStatus = (score) => {
+    if (!success) return 'Non-compliant';
+    if (score >= 90) return 'Fully Compliant';
+    if (score >= 70) return 'Mostly Compliant';
+    if (score >= 50) return 'Partially Compliant';
+    return 'Minimally Compliant';
+  };
+
+  // Generate score for this test
+  const score = getScore();
+  
   const testDetails = {
     encryption: {
       title: 'Data Encryption Test',
@@ -129,7 +150,9 @@ function getMockTestDetails(testType, success) {
         'Rotate encryption keys every 90 days',
         'Use envelope encryption for sensitive data',
         'Implement encrypted field-level security'
-      ]
+      ],
+      overallScore: score,
+      complianceStatus: getComplianceStatus(score)
     },
     access: {
       title: 'Access Control Test',
@@ -145,7 +168,9 @@ function getMockTestDetails(testType, success) {
         'Enforce strong password requirements',
         'Implement just-in-time access for privileged accounts',
         'Automate access reviews with Azure AD'
-      ]
+      ],
+      overallScore: score,
+      complianceStatus: getComplianceStatus(score)
     },
     dataProtection: {
       title: 'Data Protection Test',
@@ -161,7 +186,9 @@ function getMockTestDetails(testType, success) {
         'Set up automated backup testing',
         'Create a comprehensive data classification scheme',
         'Implement data lifecycle management'
-      ]
+      ],
+      overallScore: score,
+      complianceStatus: getComplianceStatus(score)
     },
     compliance: {
       title: 'Compliance Test',
@@ -177,7 +204,9 @@ function getMockTestDetails(testType, success) {
         'Schedule regular compliance audits',
         'Document compliance evidence systematically',
         'Conduct regular compliance training'
-      ]
+      ],
+      overallScore: score,
+      complianceStatus: getComplianceStatus(score)
     }
   };
 
@@ -185,6 +214,8 @@ function getMockTestDetails(testType, success) {
     title: 'Unknown Test',
     description: 'No details available for this test.',
     checkpoints: [],
-    recommendations: []
+    recommendations: [],
+    overallScore: 0,
+    complianceStatus: 'Unknown'
   };
 } 

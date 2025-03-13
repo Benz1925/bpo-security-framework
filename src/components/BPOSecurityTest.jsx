@@ -201,7 +201,7 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="flex flex-col space-y-1">
                     <span className="text-sm text-gray-500">Overall Score</span>
-                    <span className="text-2xl font-bold">{testDetails[selectedTest].overallScore || 0}%</span>
+                    <span className="text-2xl font-bold">{testDetails[selectedTest].overallScore ?? 0}%</span>
                   </div>
                   <div className="flex flex-col space-y-1">
                     <span className="text-sm text-gray-500">Compliance Status</span>
