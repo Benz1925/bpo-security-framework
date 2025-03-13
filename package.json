@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "prebuild": "node scripts/update-config.js",
     "build": "next build",
-    "build:static": "npm run prebuild && next build",
+    "build:static": "npm run prebuild && next build && next export",
     "start": "next start",
     "lint": "next lint",
     "export": "next export",
@@ -14,11 +14,14 @@
     "build:api": "cd api && npm install"
   },
   "dependencies": {
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "lucide-react": "^0.476.0",
     "next": "15.1.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "recharts": "^2.10.3"
+    "recharts": "^2.10.3",
+    "tailwind-merge": "^3.0.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
