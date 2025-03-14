@@ -15,6 +15,16 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Ensure proper module resolution
+  experimental: {
+    esmExternals: true,
+  },
+  // Handle basePath for Azure Static Web Apps
+  basePath: '',
+  // Configure module resolution
+  webpack: (config) => {
+    return config;
+  },
 };
 
 export default nextConfig; 

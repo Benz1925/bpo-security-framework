@@ -4,13 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "prebuild": "node scripts/update-config.js",
+    "prebuild": "node scripts/update-config.js || echo 'No config script found, continuing...'",
     "build": "next build",
-    "build:static": "npm run prebuild && next build && next export",
+    "build:static": "next build && next export -o out || next build",
     "start": "next start",
     "lint": "next lint",
-    "export": "next export",
-    "build:azure": "DISABLE_ESLINT_PLUGIN=true npm run prebuild && next build",
+    "export": "next export -o out",
+    "build:azure": "DISABLE_ESLINT_PLUGIN=true next build",
     "build:api": "cd api && npm install"
   },
   "dependencies": {

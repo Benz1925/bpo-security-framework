@@ -26,18 +26,23 @@ jobs:
           node-version: '18'
           
       - name: Install Frontend Dependencies
-        run: npm install
+        run: npm ci
         
       - name: Install API Dependencies
         run: |
-          cd api
-          npm install
+          if [ -d "api" ]; then
+            cd api
+            npm ci
+          fi
           
       - name: Create config directory
         run: mkdir -p public
       
       - name: Update config file
-        run: node scripts/update-config.js
+        run: |
+          if [ -f "scripts/update-config.js" ]; then
+            node scripts/update-config.js
+          fi
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || '/api' }}
           AUTH_PROVIDER: 'azure'
