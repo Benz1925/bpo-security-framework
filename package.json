@@ -14,6 +14,7 @@
     "build:api": "cd api && npm install"
   },
   "dependencies": {
+    "@radix-ui/react-label": "^2.1.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.476.0",

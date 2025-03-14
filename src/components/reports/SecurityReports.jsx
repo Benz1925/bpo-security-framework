@@ -5,9 +5,10 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { 
   Shield, AlertTriangle, FileText, Download, Calendar, 
-  Filter, ChevronDown, Printer, BarChart4, CheckCircle
+  Filter, ChevronDown, Printer, BarChart4, CheckCircle, Download as DownloadIcon, X
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { tasksService } from '@/services/tasksService';
 
 // Sample report data - in a real app, this would come from an API
 const generateMockReports = (clientId) => {
@@ -43,11 +44,14 @@ const generateMockReports = (clientId) => {
   }).sort((a, b) => b.date - a.date); // Sort by date, newest first
 };
 
-const SecurityReports = ({ client }) => {
+const SecurityReports = ({ client, addAlert }) => {
   const [reports, setReports] = useState([]);
   const [filter, setFilter] = useState('all');
   const [selectedReport, setSelectedReport] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showRemediationModal, setShowRemediationModal] = useState(false);
+  const [selectedFinding, setSelectedFinding] = useState(null);
+  const [exportLoading, setExportLoading] = useState(false);
 
   useEffect(() => {
     if (client) {
@@ -84,6 +88,85 @@ const SecurityReports = ({ client }) => {
     setSelectedReport(report);
   };
 
+  // Handle remediation button click
+  const handleRemediate = (finding, index) => {
+    setSelectedFinding({
+      ...finding,
+      reportId: selectedReport.id,
+      index: index
+    });
+    setShowRemediationModal(true);
+  };
+
+  // Handle when a remediation task is created
+  const handleRemediationComplete = async (remediation) => {
+    if (!selectedFinding || !client) return;
+    
+    try {
+      // Create a task using the task service
+      const taskData = {
+        clientId: client.id,
+        title: selectedFinding.title || `Finding #${selectedFinding.index + 1}`,
+        description: remediation.action,
+        priority: remediation.priority,
+        assignee: remediation.assignee,
+        dueDate: remediation.dueDate,
+        testType: 'report',
+        status: 'pending',
+        source: 'security_report',
+        sourceId: selectedReport?.id
+      };
+      
+      await tasksService.addTask(taskData);
+      
+      // Show success message
+      addAlert('success', 'Remediation task created successfully');
+      
+      // Close modal
+      setShowRemediationModal(false);
+    } catch (error) {
+      console.error('Error creating remediation task:', error);
+      addAlert('error', 'Failed to create remediation task');
+    }
+  };
+
+  // Handle export report
+  const handleExportReport = () => {
+    if (!selectedReport) return;
+    
+    setExportLoading(true);
+    
+    // Simulate report generation
+    setTimeout(() => {
+      // Create a simple JSON representation of the report
+      const reportData = {
+        title: selectedReport.title,
+        date: format(selectedReport.date, 'yyyy-MM-dd'),
+        status: selectedReport.status,
+        complianceFramework: selectedReport.complianceFramework,
+        score: selectedReport.score,
+        criticalFindings: selectedReport.criticalFindings
+      };
+      
+      // Convert to string
+      const jsonString = JSON.stringify(reportData, null, 2);
+      
+      // Create a blob with the data
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      
+      // Create an anchor element and trigger a download
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `security-report-${selectedReport.id}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      setExportLoading(false);
+      addAlert('success', 'Report exported successfully');
+    }, 1500);
+  };
+
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
@@ -96,9 +179,30 @@ const SecurityReports = ({ client }) => {
             variant="outline" 
             size="sm"
             className="flex items-center gap-1"
+            onClick={() => {
+              if (reports.length > 0) {
+                setExportLoading(true);
+                setTimeout(() => {
+                  setExportLoading(false);
+                  addAlert('success', 'All reports exported successfully');
+                }, 1500);
+              } else {
+                addAlert('warning', 'No reports available to export');
+              }
+            }}
+            disabled={exportLoading || reports.length === 0}
           >
-            <Download className="h-4 w-4" />
-            Export All
+            {exportLoading ? (
+              <>
+                <div className="h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-1"></div>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <DownloadIcon className="h-4 w-4" />
+                Export All
+              </>
+            )}
           </Button>
         </div>
         <p className="text-gray-500 text-sm">
@@ -106,7 +210,19 @@ const SecurityReports = ({ client }) => {
         </p>
       </div>
 
-      {isLoading ? (
+      {!client ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="flex flex-col items-center">
+            <div className="bg-blue-100 text-blue-600 p-4 rounded-full mb-3">
+              <FileText className="h-8 w-8" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">Select a Client</h3>
+            <p className="text-sm text-gray-500 max-w-md text-center">
+              Please select a client from the sidebar to view security reports.
+            </p>
+          </div>
+        </div>
+      ) : isLoading ? (
         <div className="flex justify-center items-center py-12">
           <div className="flex flex-col items-center">
             <div className="h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>
@@ -228,9 +344,20 @@ const SecurityReports = ({ client }) => {
                         variant="outline" 
                         size="sm" 
                         className="flex items-center gap-1"
+                        onClick={handleExportReport}
+                        disabled={exportLoading}
                       >
-                        <Download className="h-4 w-4" />
-                        Download
+                        {exportLoading ? (
+                          <>
+                            <div className="h-3 w-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-1"></div>
+                            Exporting...
+                          </>
+                        ) : (
+                          <>
+                            <DownloadIcon className="h-4 w-4" />
+                            Download
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -275,10 +402,16 @@ const SecurityReports = ({ client }) => {
                       </div>
 
                       <div className="mb-6">
-                        <h3 className="text-sm font-medium text-gray-500 mb-2">Key Findings</h3>
+                        <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center justify-between">
+                          <span>Key Findings</span>
+                          <Button variant="outline" size="sm" className="text-xs flex items-center gap-1">
+                            <DownloadIcon className="h-3 w-3" />
+                            Export Findings
+                          </Button>
+                        </h3>
                         <div className="space-y-2">
                           {Array.from({ length: 3 + (selectedReport.criticalFindings || 0) }, (_, i) => (
-                            <div key={i} className="flex items-start gap-2 p-3 bg-gray-50 rounded-lg">
+                            <div key={i} className="flex items-start gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-200 transition-all">
                               <div className={`p-1.5 rounded-full flex-shrink-0 ${
                                 i < selectedReport.criticalFindings 
                                   ? 'bg-red-100 text-red-700' 
@@ -286,12 +419,32 @@ const SecurityReports = ({ client }) => {
                               }`}>
                                 <AlertTriangle className="h-3.5 w-3.5" />
                               </div>
-                              <div>
-                                <h4 className="text-sm font-medium">
-                                  {i < selectedReport.criticalFindings 
-                                    ? `Critical Finding ${i+1}: ${['Unpatched vulnerability', 'Weak encryption', 'Excessive permissions', 'Insecure API', 'Missing MFA'][i % 5]}`
-                                    : `Finding ${i+1}: ${['Outdated security policy', 'Inconsistent access reviews', 'Incomplete audit logs'][i % 3]}`
-                                  }
+                              <div className="flex-1">
+                                <h4 className="text-sm font-medium flex items-center justify-between">
+                                  <span>
+                                    {i < selectedReport.criticalFindings 
+                                      ? `Critical Finding ${i+1}: ${['Unpatched vulnerability', 'Weak encryption', 'Excessive permissions', 'Insecure API', 'Missing MFA'][i % 5]}`
+                                      : `Finding ${i+1}: ${['Outdated security policy', 'Inconsistent access reviews', 'Incomplete audit logs'][i % 3]}`
+                                    }
+                                  </span>
+                                  {i < selectedReport.criticalFindings && addAlert && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="text-xs h-7 px-2 text-blue-600" 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const finding = {
+                                          title: `${['Unpatched vulnerability', 'Weak encryption', 'Excessive permissions', 'Insecure API', 'Missing MFA'][i % 5]}`,
+                                          priority: 'critical',
+                                          description: 'A critical security issue identified in security report that requires immediate attention.'
+                                        };
+                                        handleRemediate(finding, i);
+                                      }}
+                                    >
+                                      Remediate
+                                    </Button>
+                                  )}
                                 </h4>
                                 <p className="text-xs text-gray-500 mt-1">
                                   {i < selectedReport.criticalFindings
@@ -299,6 +452,11 @@ const SecurityReports = ({ client }) => {
                                     : `A medium-priority finding that should be addressed within 30 days.`
                                   }
                                 </p>
+                                {selectedReport.status === 'Completed' && (
+                                  <div className="mt-2 text-xs text-gray-500">
+                                    <span className="font-medium">Impact Score:</span> {70 - (i * 10)}%
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -370,6 +528,132 @@ const SecurityReports = ({ client }) => {
                 </CardContent>
               </Card>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Remediation Modal for report findings */}
+      {showRemediationModal && selectedFinding && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg relative overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-blue-600" />
+                <h2 className="text-lg font-semibold">Remediate Finding</h2>
+              </div>
+              <button 
+                onClick={() => setShowRemediationModal(false)} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6">
+              <div className="mb-4">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="p-2 rounded-full bg-red-100 text-red-700 flex-shrink-0 mt-0.5">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-lg">{selectedFinding.title}</h3>
+                    <p className="text-gray-600 mt-1">{selectedFinding.description}</p>
+                    <div className="mt-2 flex items-center">
+                      <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">
+                        Critical finding
+                      </span>
+                      <span className="text-xs text-gray-500 ml-2">
+                        From: {selectedReport?.title || 'Security Report'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <form className="space-y-4">
+                  <div>
+                    <label htmlFor="action" className="block text-sm font-medium text-gray-700 mb-1">
+                      Remediation Action
+                    </label>
+                    <textarea
+                      id="action"
+                      rows={3}
+                      className="w-full p-2 border rounded-md"
+                      placeholder="Describe the specific action to address this finding..."
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="assignee" className="block text-sm font-medium text-gray-700 mb-1">
+                      Assignee
+                    </label>
+                    <input
+                      id="assignee"
+                      type="text"
+                      className="w-full p-2 border rounded-md"
+                      placeholder="Who will be responsible for this task?"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-1">
+                      Due Date
+                    </label>
+                    <input
+                      id="dueDate"
+                      type="date"
+                      className="w-full p-2 border rounded-md"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
+                      Priority
+                    </label>
+                    <select
+                      id="priority"
+                      className="w-full p-2 border rounded-md"
+                      defaultValue="critical"
+                      required
+                    >
+                      <option value="critical">Critical</option>
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
+                  
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setShowRemediationModal(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="button" 
+                      onClick={() => {
+                        // Mock remediation data
+                        const remediationData = {
+                          action: `Remediate ${selectedFinding.title}`,
+                          assignee: 'Security Team',
+                          dueDate: new Date().toISOString().split('T')[0],
+                          priority: 'critical'
+                        };
+                        handleRemediationComplete(remediationData);
+                      }}
+                    >
+                      Create Remediation Task
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
       )}

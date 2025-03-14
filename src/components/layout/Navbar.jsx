@@ -1,14 +1,18 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Shield, User, LogOut, BarChart, FileText, Settings, Menu } from 'lucide-react';
+import React, { useState, useContext } from 'react';
+import { Shield, User, LogOut, BarChart, FileText, Settings, Menu, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+import { TabContext } from '@/app/page';
 
-const Navbar = ({ activeTab, setActiveTab }) => {
+const Navbar = () => {
+  // Always use context for tab navigation
+  const { activeTab, setActiveTab } = useContext(TabContext);
+  
   const { user, logout, isAuthenticated } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+  
   return (
     <nav className="bg-white border-b border-gray-200 px-4 py-2">
       <div className="flex justify-between items-center">
@@ -40,6 +44,12 @@ const Navbar = ({ activeTab, setActiveTab }) => {
               onClick={() => setActiveTab("reports")}
             />
             <NavItem 
+              icon={<CheckSquare className="w-4 h-4" />} 
+              label="Tasks" 
+              active={activeTab === "tasks"}
+              onClick={() => setActiveTab("tasks")}
+            />
+            <NavItem 
               icon={<Settings className="w-4 h-4" />} 
               label="Settings" 
             />
@@ -48,7 +58,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
         
         {/* Mobile menu button */}
         <div className="md:hidden">
-          <button 
+          <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="text-gray-500 hover:text-gray-700 focus:outline-none"
           >
@@ -61,7 +71,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
           <div className="hidden md:flex items-center gap-4 ml-4">
             <div className="flex items-center gap-2">
               <User className="w-5 h-5 text-gray-800" />
-              <span className="text-sm font-medium">{user.name}</span>
+              <span className="text-sm font-medium">{user?.name}</span>
             </div>
             <Button 
               variant="outline" 
@@ -108,6 +118,15 @@ const Navbar = ({ activeTab, setActiveTab }) => {
               }}
             />
             <MobileNavItem 
+              icon={<CheckSquare className="w-4 h-4" />} 
+              label="Tasks" 
+              active={activeTab === "tasks"}
+              onClick={() => {
+                setActiveTab("tasks");
+                setMobileMenuOpen(false);
+              }}
+            />
+            <MobileNavItem 
               icon={<Settings className="w-4 h-4" />} 
               label="Settings" 
             />
@@ -117,7 +136,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <User className="w-5 h-5 text-gray-800" />
-                    <span className="text-sm font-medium">{user.name}</span>
+                    <span className="text-sm font-medium">{user?.name}</span>
                   </div>
                   <Button 
                     variant="outline" 
@@ -140,7 +159,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
 
 // Navigation Item Component for Desktop
 const NavItem = ({ icon, label, active, onClick }) => (
-  <button 
+  <button
     onClick={onClick}
     className={`px-3 py-2 rounded text-sm font-medium flex items-center gap-1.5 ${
       active 
@@ -155,7 +174,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 
 // Navigation Item Component for Mobile
 const MobileNavItem = ({ icon, label, active, onClick }) => (
-  <button 
+  <button
     onClick={onClick}
     className={`px-2 py-2.5 rounded text-sm font-medium flex items-center gap-2 w-full text-left ${
       active 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useEffect, useImperativeHandle, forwardRef, useContext } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Shield, AlertTriangle, Check, X, BarChart, PieChart, Calendar, RefreshCw, TrendingUp, Download, Lock, UserCheck, AlertCircle, CheckCircle, ChevronRight } from 'lucide-react';
@@ -8,13 +8,17 @@ import { securityTestsApi } from '@/services/api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RemediationModal from './RemediationModal';
+import { TabContext } from '@/app/page';
 import { 
   LineChart, Line, AreaChart, Area, RadarChart, PolarGrid, 
   PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
 
-const SecurityDashboardComponent = ({ client, activeTab, setActiveTab }, ref) => {
+const SecurityDashboardComponent = ({ client }, ref) => {
+  // Access TabContext directly
+  const { activeTab, setActiveTab } = useContext(TabContext);
+
   // Initialize with empty/default values to prevent hydration mismatches
   const [dashboardData, setDashboardData] = useState({
     overallScore: 0,
@@ -61,13 +65,13 @@ const SecurityDashboardComponent = ({ client, activeTab, setActiveTab }, ref) =>
     setDashboardData(updatedDashboardData);
   };
   
-  // Check if we should use mock data from config - only run on client
+  // Safely check if we should use mock data
   const shouldUseMockData = () => {
     // Always return true during server-side rendering
-    if (!isMounted) return true;
+    if (typeof window === 'undefined') return true;
     
     try {
-      if (typeof window !== 'undefined' && window.APP_CONFIG) {
+      if (window.APP_CONFIG) {
         return window.APP_CONFIG.useMockApi === true;
       }
     } catch (e) {
@@ -80,7 +84,8 @@ const SecurityDashboardComponent = ({ client, activeTab, setActiveTab }, ref) =>
   
   // Function to generate mock dashboard data
   const generateMockDashboardData = (errorMessage = null) => {
-    if (!isMounted) return; // Don't run during SSR
+    // Don't run during SSR
+    if (typeof window === 'undefined') return;
     
     console.log("Generating mock dashboard data", errorMessage ? `due to error: ${errorMessage}` : "");
     const testTypes = ['encryption', 'access', 'dataProtection', 'compliance'];
@@ -210,7 +215,7 @@ const SecurityDashboardComponent = ({ client, activeTab, setActiveTab }, ref) =>
   // Fetch data for the dashboard
   useEffect(() => {
     // Skip this effect during server-side rendering or if client is not available
-    if (!isMounted || !client) return;
+    if (typeof window === 'undefined' || !client) return;
     
     console.log("Starting dashboard data fetch for client:", client);
     
@@ -228,7 +233,7 @@ const SecurityDashboardComponent = ({ client, activeTab, setActiveTab }, ref) =>
       const timeoutId = setTimeout(() => {
         console.log("API fetch timeout - falling back to mock data");
         generateMockDashboardData("API request timed out");
-      }, typeof window !== 'undefined' && window.APP_CONFIG?.apiTimeout ? window.APP_CONFIG.apiTimeout : 5000);
+      }, window.APP_CONFIG?.apiTimeout ? window.APP_CONFIG.apiTimeout : 5000);
       
       try {
         // Fetch results for each test type
@@ -332,7 +337,7 @@ const SecurityDashboardComponent = ({ client, activeTab, setActiveTab }, ref) =>
     };
     
     fetchDashboardData();
-  }, [client, isMounted]);
+  }, [client]);
 
   // Manually refresh the dashboard
   const refreshDashboard = () => {

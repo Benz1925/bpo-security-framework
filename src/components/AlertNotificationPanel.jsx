@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -21,13 +23,13 @@ const AlertNotificationPanel = ({ alerts, clearAlerts, dismissAlert }) => {
   };
 
   return (
-    <Card className={`shadow-md mt-4 border ${alerts.some(a => a.type === 'error') ? 'border-l-4 border-l-red-500 bg-red-50' : 'border-gray-200'}`}>
+    <Card className={`shadow-md mt-4 border ${alerts && alerts.some(a => a.type === 'error') ? 'border-l-4 border-l-red-500 bg-red-50' : 'border-gray-200'}`}>
       <CardHeader className="pb-2 bg-gray-50 rounded-t-lg">
         <div className="flex flex-col items-start gap-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <div className="relative">
-              <Bell className={`h-5 w-5 ${alerts.some(a => a.type === 'error') ? 'text-red-500' : 'text-blue-500'}`} />
-              {alerts.length > 0 && (
+              <Bell className={`h-5 w-5 ${alerts && alerts.some(a => a.type === 'error') ? 'text-red-500' : 'text-blue-500'}`} />
+              {alerts && alerts.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
                   {alerts.length > 9 ? '9+' : alerts.length}
                 </span>
@@ -35,7 +37,7 @@ const AlertNotificationPanel = ({ alerts, clearAlerts, dismissAlert }) => {
             </div>
             Alerts & Notifications
           </CardTitle>
-          {alerts.length > 0 && (
+          {alerts && alerts.length > 0 && (
             <Button 
               variant="ghost" 
               size="sm" 
@@ -47,8 +49,8 @@ const AlertNotificationPanel = ({ alerts, clearAlerts, dismissAlert }) => {
           )}
         </div>
       </CardHeader>
-      <CardContent className={`${alerts.length > 0 ? 'p-3' : 'py-6'}`}>
-        {alerts.length > 0 ? (
+      <CardContent className={`${alerts && alerts.length > 0 ? 'p-3' : 'py-6'}`}>
+        {alerts && alerts.length > 0 ? (
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {alerts.map((alert, index) => (
               <Alert 

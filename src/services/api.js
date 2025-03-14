@@ -10,16 +10,26 @@ const getApiBaseUrl = () => {
 
 // Check if we should use mock data
 const shouldUseMockData = () => {
-  // Use mock data in development without API URL
-  if (process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_API_URL) {
+  // During server-side rendering, always use mock data
+  if (typeof window === 'undefined') {
     return true;
   }
   
-  // Use mock data if configured in APP_CONFIG
-  if (typeof window !== 'undefined' && window.APP_CONFIG && window.APP_CONFIG.useMockApi) {
+  // Check if we're in development mode
+  if (process.env.NODE_ENV === 'development') {
     return true;
   }
   
+  // Check for app config (client-side only)
+  try {
+    if (window.APP_CONFIG) {
+      return window.APP_CONFIG.useMockApi === true;
+    }
+  } catch (e) {
+    console.error("Error checking APP_CONFIG:", e);
+  }
+  
+  // Default to false in production
   return false;
 };
 

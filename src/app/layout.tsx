@@ -2,7 +2,7 @@ import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { AuthProvider } from "@/context/AuthContext";
-import Script from "next/script";
+import FooterWithYear from '@/components/layout/FooterWithYear';
 
 // Use Inter as the default font
 const inter = Inter({ 
@@ -13,7 +13,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'BPO Security Framework',
-  description: 'Security Assessment Framework for BPO Services',
+  description: 'A comprehensive security testing and compliance framework for BPO organizations',
 }
 
 export default function RootLayout({
@@ -23,30 +23,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
-      <head>
-        <Script src="/config.js" strategy="beforeInteractive" />
-      </head>
-      <body className="min-h-screen bg-background antialiased">
+      <body className={`${inter.className} min-h-screen flex flex-col bg-gray-50`}>
         <AuthProvider>
-          <div className="relative flex min-h-screen flex-col">
-            <main className="flex-1">
-              {children}
-            </main>
-            <footer className="mt-8 border-t border-gray-200 bg-white">
-              <div className="container mx-auto py-4 px-4 md:px-6">
-                <div className="flex flex-col items-center justify-between gap-2 md:h-14 md:flex-row">
-                  <p className="text-sm text-muted-foreground text-center md:text-left">
-                    © {new Date().getFullYear()} BPO Security Framework. All rights reserved.
-                  </p>
-                  <div className="flex items-center gap-4">
-                    <p className="text-sm text-muted-foreground">
-                      Version 1.0.0
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </footer>
-          </div>
+          <main className="flex-grow">
+            {children}
+          </main>
+          <FooterWithYear />
         </AuthProvider>
       </body>
     </html>

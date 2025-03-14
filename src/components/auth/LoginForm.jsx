@@ -1,133 +1,161 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Card, CardHeader, CardContent, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Shield, LogIn } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
-const LoginForm = ({ onLogin }) => {
-  const [credentials, setCredentials] = useState({
-    email: '',
-    password: ''
-  });
-  const [error, setError] = useState('');
+const LoginForm = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setCredentials(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = async (e) => {
+  const [error, setError] = useState('');
+  
+  const { login } = useAuth();
+  
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
     
     try {
-      // In a real app, this would be an API call to your authentication service
-      // For demo purposes, we'll simulate authentication
+      // Basic validation
+      if (!email.trim() || !password.trim()) {
+        throw new Error('Email and password are required');
+      }
+      
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Simple validation
-      if (!credentials.email || !credentials.password) {
-        throw new Error('Please enter both email and password');
+      // Call login function from auth context
+      const success = await login(email, password);
+      
+      if (!success) {
+        throw new Error('Invalid credentials. Please try again.');
       }
       
-      // Simple validation for email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(credentials.email)) {
-        throw new Error('Please enter a valid email address');
-      }
-      
-      // For demo purposes, accept any valid formatted email and non-empty password
-      if (credentials.email && credentials.password.length >= 6) {
-        const user = {
-          id: '1',
-          name: 'User',
-          email: credentials.email,
-          role: 'admin'
-        };
-        
-        // Store user in localStorage (in a real app, you'd use secure cookies or tokens)
-        localStorage.setItem('bpo_user', JSON.stringify(user));
-        
-        // Call the onLogin callback with the user object
-        if (onLogin) onLogin(user);
-      } else {
-        throw new Error('Password must be at least 6 characters');
-      }
+      // Login successful - handled by auth context
     } catch (err) {
-      setError(err.message);
-    } finally {
+      setError(err.message || 'Failed to login. Please try again.');
       setIsLoading(false);
     }
   };
-
+  
+  const handleDemoLogin = async () => {
+    // Set demo credentials
+    setEmail('demo@bposecurity.com');
+    setPassword('securePassword123');
+    
+    // Instead of manipulating the DOM, call handleLogin directly
+    // with a synthetic event
+    setError('');
+    setIsLoading(true);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Call login function from auth context with demo credentials
+      const success = await login('demo@bposecurity.com', 'securePassword123');
+      
+      if (!success) {
+        throw new Error('Invalid credentials. Please try again.');
+      }
+      
+    } catch (err) {
+      setError(err.message || 'Failed to login. Please try again.');
+      setIsLoading(false);
+    }
+  };
+  
   return (
-    <div className="flex justify-center items-center min-h-[70vh]">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="w-6 h-6 text-blue-600" />
-            BPO Security Framework Login
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-medium">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={credentials.email}
-                onChange={handleChange}
-                className="w-full p-2 border rounded-md"
-                placeholder="Enter your email"
-              />
+    <Card className="w-full max-w-md mx-auto shadow-lg">
+      <CardHeader className="space-y-1 text-center bg-gray-50 rounded-t-lg border-b border-gray-100">
+        <div className="mx-auto p-2 bg-blue-600 rounded-full w-12 h-12 flex items-center justify-center mb-2">
+          <Shield className="h-6 w-6 text-white" />
+        </div>
+        <CardTitle className="text-2xl font-bold">BPO Security Framework</CardTitle>
+        <CardDescription>
+          Enter your credentials to access the security dashboard
+        </CardDescription>
+      </CardHeader>
+      <form id="login-form" onSubmit={handleLogin}>
+        <CardContent className="space-y-4 pt-6">
+          {error && (
+            <div className="bg-red-50 text-red-800 p-3 rounded-md text-sm">
+              {error}
             </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="password" className="block text-sm font-medium">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                value={credentials.password}
-                onChange={handleChange}
-                className="w-full p-2 border rounded-md"
-                placeholder="••••••••"
-              />
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input 
+              id="email" 
+              type="email" 
+              placeholder="your.email@company.com" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <a href="#" className="text-xs text-blue-600 hover:underline">
+                Forgot password?
+              </a>
             </div>
-            
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Signing in...' : 'Sign in'}
-            </Button>
-          </form>
+            <Input 
+              id="password" 
+              type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
         </CardContent>
-        <CardFooter className="flex justify-center text-sm text-gray-500">
-          <p>Sign in with your BPO credentials</p>
+        <CardFooter className="flex flex-col space-y-2">
+          <Button 
+            type="submit" 
+            className="w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center">
+                <span className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Signing in...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center">
+                <LogIn className="h-4 w-4 mr-2" />
+                Sign In
+              </span>
+            )}
+          </Button>
+          
+          <div className="relative py-3">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-2 bg-white text-gray-500">For demonstration</span>
+            </div>
+          </div>
+          
+          <Button 
+            type="button" 
+            variant="outline" 
+            className="w-full"
+            onClick={handleDemoLogin}
+            disabled={isLoading}
+          >
+            Use Demo Account
+          </Button>
         </CardFooter>
-      </Card>
-    </div>
+      </form>
+    </Card>
   );
 };
 

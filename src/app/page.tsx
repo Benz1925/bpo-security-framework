@@ -1,180 +1,215 @@
 "use client";
 
-import { useState, Dispatch, SetStateAction, useRef, useEffect } from 'react';
-import BPOSecurityTest from "@/components/BPOSecurityTest";
-import LoginForm from "@/components/auth/LoginForm";
-import Navbar from "@/components/layout/Navbar";
-import ClientSelector from "@/components/clients/ClientSelector";
-import SecurityDashboard from "@/components/dashboard/SecurityDashboard";
-import SecurityReports from "@/components/reports/SecurityReports";
-import AlertNotificationPanel from "@/components/AlertNotificationPanel";
-import { useAuth } from "@/context/AuthContext";
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
+import BPOSecurityTest from '@/components/BPOSecurityTest';
+import { Card } from '@/components/ui/card';
+import SecurityDashboard from '@/components/dashboard/SecurityDashboard';
+import ClientSelector from '@/components/clients/ClientSelector';
+import LoginForm from '@/components/auth/LoginForm';
+import AlertNotificationPanel from '@/components/AlertNotificationPanel';
+import SecurityReports from '@/components/reports/SecurityReports';
+import { useAuth } from '@/context/AuthContext';
+import TasksManagement from '@/components/tasks/TasksManagement';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Shield, BarChart, FileText, CheckSquare } from 'lucide-react';
 
-// Define types for our data
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
+// Define types
+interface AlertType {
+  type: string;
+  message: string;
+  timestamp: string;
 }
 
 interface Client {
   id: string;
   name: string;
   industry: string;
-  complianceLevel: string;
+  riskLevel: string;
 }
 
-// Define Alert type
-interface Alert {
-  type: 'success' | 'error' | 'warning' | 'info';
-  message: string;
-  timestamp: string;
-}
-
-// Define BPOSecurityTest props type
-interface BPOSecurityTestProps {
-  client: Client | null;
-  hideHeader?: boolean;
-  addAlert: (type: 'success' | 'error' | 'warning' | 'info', message: string) => void;
-}
-
-// Define SecurityDashboard props type
-interface SecurityDashboardProps {
-  client: Client | null;
+// Create a context for active tab state
+export const TabContext = React.createContext<{
   activeTab: string;
-  setActiveTab: Dispatch<SetStateAction<string>>;
-}
+  setActiveTab: (tab: string) => void;
+}>({
+  activeTab: 'dashboard',
+  setActiveTab: () => {}
+});
 
 export default function Home() {
-  const { login, isAuthenticated } = useAuth();
+  const [alerts, setAlerts] = useState<AlertType[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [isLoading, setIsLoading] = useState(false);
-  const dashboardRef = useRef<any>(null);
-  const securityTestsRef = useRef<any>(null);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-
-  const handleLogin = (userData: User) => {
-    login(userData);
-  };
-
-  const handleClientSelect = (client: Client) => {
-    setSelectedClient(client);
-    // Add an alert when client is selected
-    addAlert('info', `Client ${client.name} selected`);
-  };
-
-  // Function to add alerts that can be called from any component
-  const addAlert = (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const { isAuthenticated, user } = useAuth();
+  
+  // Handle navigation from other components to specific tabs
+  useEffect(() => {
+    // Skip during server-side rendering
+    if (typeof window === 'undefined') return;
+    
+    const handleNavigateToTasks = (event: CustomEvent) => {
+      setActiveTab('tasks');
+      // Add alert about task navigation
+      addAlert({
+        type: 'info',
+        message: 'Navigated to security tasks for follow-up actions'
+      });
+    };
+    
+    // Add event listener for custom navigation event
+    window.addEventListener('navigate-to-tasks', handleNavigateToTasks as EventListener);
+    
+    // Clean up event listener on unmount
+    return () => {
+      window.removeEventListener('navigate-to-tasks', handleNavigateToTasks as EventListener);
+    };
+  }, []);
+  
+  // Add welcome notification on component mount and test notifications in dev mode
+  useEffect(() => {
+    // Skip during server-side rendering
+    if (typeof window === 'undefined') return;
+    
+    // Only add welcome notification if user is authenticated
+    if (isAuthenticated && user) {
+      // Give a slight delay for better UX
+      setTimeout(() => {
+        addAlert({
+          type: 'success',
+          message: `Welcome back! You are logged in as ${user.email}`
+        });
+        
+        // Add test notifications only in development mode
+        if (process.env.NODE_ENV === 'development') {
+          // Add with slight delay to demonstrate functionality
+          setTimeout(() => {
+            addAlert({
+              type: 'success',
+              message: 'Encryption test passed: All sensitive data properly encrypted.'
+            });
+            
+            addAlert({
+              type: 'warning',
+              message: 'Access Control Vulnerability: Excessive admin permissions detected.'
+            });
+            
+            addAlert({
+              type: 'error',
+              message: 'Critical: Unpatched security vulnerability detected in system.'
+            });
+            
+            addAlert({
+              type: 'info',
+              message: 'Compliance scan scheduled for next Monday.'
+            });
+          }, 2000);
+        }
+      }, 500);
+    }
+  }, [isAuthenticated, user]);
+  
+  const addAlert = ({ type, message }: { type: string; message: string }) => {
     const timestamp = new Date().toLocaleTimeString();
-    setAlerts(prev => [...prev, { type, message, timestamp }]);
+    setAlerts(prev => [{type, message, timestamp}, ...prev]);
   };
-
-  // Function to clear all alerts
+  
   const clearAlerts = () => {
     setAlerts([]);
   };
-
-  // Function to dismiss a single alert by index
-  const dismissAlert = (indexToRemove: number) => {
-    setAlerts(prev => prev.filter((_, index) => index !== indexToRemove));
+  
+  const dismissAlert = (index: number) => {
+    setAlerts(prev => prev.filter((_, i) => i !== index));
   };
-
-  // Reference to SecurityDashboard refresh function
-  const refreshDashboard = () => {
-    setIsLoading(true);
-    // Call the refreshDashboard function on the SecurityDashboard component
-    if (dashboardRef.current) {
-      dashboardRef.current.refreshDashboard();
-      addAlert('info', 'Dashboard refresh initiated');
-    }
-    // Simulate loading for a better user experience
-    setTimeout(() => setIsLoading(false), 1000);
-  };
-
-  const runAllTests = () => {
-    // Call the runAllTests function on the BPOSecurityTest component
-    if (securityTestsRef.current) {
-      securityTestsRef.current.runAllTests();
-      addAlert('info', 'All security tests initiated');
-    }
-  };
-
-  // Add a welcome notification when the component mounts
-  useEffect(() => {
-    if (isAuthenticated) {
-      addAlert('info', 'Welcome to BPO Security Framework. Select a client to begin.');
-      
-      // In development mode, add some test notifications to demonstrate functionality
-      if (process.env.NODE_ENV === 'development') {
-        // Add with a slight delay so they appear after initial render
-        const timer = setTimeout(() => {
-          addAlert('success', 'Encryption test passed: All sensitive data properly encrypted');
-          addAlert('warning', 'Access Control Vulnerability: Excessive admin permissions detected');
-          addAlert('error', 'Critical: Unpatched security vulnerability detected in system');
-          addAlert('info', 'Compliance scan scheduled for next Monday');
-        }, 1000);
-        
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [isAuthenticated]); // Only run when authentication state changes
-
+  
+  // If user is not authenticated, show login form
   if (!isAuthenticated) {
-    return <LoginForm onLogin={handleLogin} />;
+    return (
+      <div className="container mx-auto pt-4 pb-8 px-4">
+        <div className="flex justify-center items-center min-h-[70vh]">
+          <LoginForm />
+        </div>
+      </div>
+    );
   }
-
+  
+  // Create the context value with the current activeTab and setActiveTab
+  const tabContextValue = {
+    activeTab,
+    setActiveTab
+  };
+  
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab}
-      />
-      <div className="container mx-auto px-4 md:px-6 pt-4 pb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+    <TabContext.Provider value={tabContextValue}>
+      <div className="container mx-auto pt-4 pb-8 px-4">
+        <div className="mb-6">
+          <ClientSelector 
+            onClientSelect={setSelectedClient}
+          />
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="dashboard" className="flex items-center gap-1.5">
+                  <BarChart className="w-4 h-4" />
+                  Dashboard
+                </TabsTrigger>
+                <TabsTrigger value="tests" className="flex items-center gap-1.5">
+                  <Shield className="w-4 h-4" />
+                  Security Tests
+                </TabsTrigger>
+                <TabsTrigger value="reports" className="flex items-center gap-1.5">
+                  <FileText className="w-4 h-4" />
+                  Reports
+                </TabsTrigger>
+                <TabsTrigger value="tasks" className="flex items-center gap-1.5">
+                  <CheckSquare className="w-4 h-4" />
+                  Tasks
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="dashboard" className="mt-4">
+                <SecurityDashboard 
+                  client={selectedClient}
+                />
+              </TabsContent>
+              
+              <TabsContent value="tests" className="mt-4">
+                <Card className="p-4">
+                  <BPOSecurityTest 
+                    client={selectedClient}
+                    addAlert={addAlert}
+                    hideHeader={false}
+                  />
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="reports" className="mt-4">
+                <SecurityReports 
+                  client={selectedClient}
+                  addAlert={addAlert}
+                />
+              </TabsContent>
+              
+              <TabsContent value="tasks" className="mt-4">
+                <TasksManagement 
+                  client={selectedClient}
+                  addAlert={addAlert}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+          
           <div className="lg:col-span-1">
-            <ClientSelector onClientSelect={handleClientSelect} />
             <AlertNotificationPanel 
-              alerts={alerts} 
-              clearAlerts={clearAlerts} 
+              alerts={alerts}
+              clearAlerts={clearAlerts}
               dismissAlert={dismissAlert}
             />
           </div>
-          
-          <div className="lg:col-span-3">
-            {/* Render components based on activeTab state */}
-            {activeTab === "dashboard" ? (
-              <SecurityDashboard 
-                ref={dashboardRef}
-                client={selectedClient} 
-                activeTab={activeTab} 
-                setActiveTab={setActiveTab} 
-              />
-            ) : activeTab === "tests" ? (
-              <BPOSecurityTest 
-                ref={securityTestsRef}
-                client={selectedClient} 
-                hideHeader={true}
-                addAlert={addAlert}
-              />
-            ) : activeTab === "reports" ? (
-              <SecurityReports 
-                client={selectedClient}
-              />
-            ) : (
-              // Default to dashboard if tab is not recognized
-              <SecurityDashboard 
-                ref={dashboardRef}
-                client={selectedClient} 
-                activeTab={activeTab} 
-                setActiveTab={setActiveTab} 
-              />
-            )}
-          </div>
         </div>
       </div>
-    </div>
+    </TabContext.Provider>
   );
 }

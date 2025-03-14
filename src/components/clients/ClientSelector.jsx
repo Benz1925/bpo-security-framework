@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building, ChevronDown, Plus, Edit, Trash } from 'lucide-react';
+import { Building, ChevronDown, Plus, User, LogOut } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 // Sample client data - in a real app, this would come from an API
 const initialClients = [
@@ -18,6 +19,7 @@ const ClientSelector = ({ onClientSelect }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAddingClient, setIsAddingClient] = useState(false);
   const [newClient, setNewClient] = useState({ name: '', industry: '', complianceLevel: 'Medium' });
+  const { user, logout } = useAuth();
 
   const handleClientSelect = (client) => {
     setSelectedClient(client);
@@ -60,10 +62,29 @@ const ClientSelector = ({ onClientSelect }) => {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-xl">
-          <Building className="w-5 h-5 text-blue-600" />
-          Client Management
-        </CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Building className="w-5 h-5 text-blue-600" />
+            Client Management
+          </CardTitle>
+          
+          {/* User info and logout */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-gray-800" />
+              <span className="text-sm font-medium">{user?.name || user?.email}</span>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-1"
+              onClick={logout}
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -178,17 +199,17 @@ const ClientSelector = ({ onClientSelect }) => {
           <div className="p-4 border rounded-md bg-gray-50">
             <h4 className="font-medium mb-3">Client Information</h4>
             <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Name:</span>
+              <div className="flex items-center">
+                <span className="text-gray-600 w-36">Name:</span>
                 <span className="font-medium">{selectedClient.name}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Industry:</span>
+              <div className="flex items-center">
+                <span className="text-gray-600 w-36">Industry:</span>
                 <span>{selectedClient.industry}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Compliance Level:</span>
-                <span className={`px-2 py-1 rounded-full text-xs ${getComplianceBadgeColor(selectedClient.complianceLevel)}`}>
+              <div className="flex items-center">
+                <span className="text-gray-600 w-36">Compliance Level:</span>
+                <span className={`px-2 py-1 rounded-full text-xs inline-block ${getComplianceBadgeColor(selectedClient.complianceLevel)}`}>
                   {selectedClient.complianceLevel}
                 </span>
               </div>

@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import { Shield, X, CheckCircle, AlertTriangle, Calendar, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { tasksService } from '@/services/tasksService';
 
-const RemediationModal = ({ issue, onClose, onRemediate }) => {
+const RemediationModal = ({ issue, onClose, onRemediate, client }) => {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [remediation, setRemediation] = useState({
@@ -22,15 +23,37 @@ const RemediationModal = ({ issue, onClose, onRemediate }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Create a new task object
+      const taskData = {
+        clientId: client?.id || 'unknown',
+        title: issue?.title || 'Unnamed issue',
+        description: remediation.action,
+        priority: remediation.priority,
+        assignee: remediation.assignee,
+        dueDate: remediation.dueDate,
+        testType: issue?.testType || 'unknown',
+        status: 'pending',
+        source: 'security_issue',
+        sourceId: `issue_${Date.now()}`
+      };
+      
+      // Store in the task service
+      await tasksService.addTask(taskData);
+      
+      setTimeout(() => {
+        setIsLoading(false);
+        setStep(2);
+      }, 500);
+    } catch (error) {
+      console.error('Error creating remediation task:', error);
       setIsLoading(false);
-      setStep(2);
-    }, 1500);
+      // You could show an error message here
+    }
   };
 
   const handleComplete = () => {
@@ -224,7 +247,10 @@ const RemediationModal = ({ issue, onClose, onRemediate }) => {
                     className="flex items-center gap-1"
                     onClick={() => {
                       onClose();
-                      // Here you would navigate to a task management page in a real app
+                      // Navigate to the tasks tab
+                      if (window && window.dispatchEvent) {
+                        window.dispatchEvent(new CustomEvent('navigate-to-tasks'));
+                      }
                     }}
                   >
                     View All Tasks <ArrowRight className="h-4 w-4" />
