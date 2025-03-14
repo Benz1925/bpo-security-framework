@@ -18,6 +18,7 @@ interface AlertType {
   type: string;
   message: string;
   timestamp: string;
+  id?: string; // Adding id for better tracking
 }
 
 interface Client {
@@ -110,7 +111,8 @@ export default function Home() {
   
   const addAlert = ({ type, message }: { type: string; message: string }) => {
     const timestamp = new Date().toLocaleTimeString();
-    setAlerts(prev => [{type, message, timestamp}, ...prev]);
+    const id = `alert-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    setAlerts(prev => [{type, message, timestamp, id}, ...prev]);
   };
   
   const clearAlerts = () => {
@@ -120,6 +122,38 @@ export default function Home() {
   const dismissAlert = (index: number) => {
     setAlerts(prev => prev.filter((_, i) => i !== index));
   };
+  
+  // Auto-dismiss alerts
+  useEffect(() => {
+    if (alerts.length === 0) return;
+    
+    // Set different timeouts based on alert type
+    const timeouts = {
+      success: 5000,  // 5 seconds
+      info: 7000,     // 7 seconds
+      warning: 10000, // 10 seconds
+      error: 0        // Don't auto-dismiss errors
+    };
+    
+    // Create timeout for each alert that should auto-dismiss
+    const timers = alerts.map((alert, index) => {
+      // Skip if alert type is error or doesn't have a defined timeout
+      if (alert.type === 'error' || !timeouts[alert.type as keyof typeof timeouts]) {
+        return null;
+      }
+      
+      return setTimeout(() => {
+        dismissAlert(index);
+      }, timeouts[alert.type as keyof typeof timeouts]);
+    });
+    
+    // Clean up timeouts when component unmounts or alerts change
+    return () => {
+      timers.forEach(timer => {
+        if (timer) clearTimeout(timer);
+      });
+    };
+  }, [alerts]);
   
   // If user is not authenticated, show login form
   if (!isAuthenticated) {
@@ -147,9 +181,19 @@ export default function Home() {
           />
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="mb-4 min-h-[60px]">
+          <AlertNotificationPanel 
+            alerts={alerts}
+            clearAlerts={clearAlerts}
+            dismissAlert={dismissAlert}
+            maxAlerts={3}
+            horizontal={true}
+          />
+        </div>
+        
+        <div className="flex-1">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <div className="mb-4">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="dashboard" className="flex items-center gap-1.5">
                   <BarChart className="w-4 h-4" />
@@ -168,46 +212,38 @@ export default function Home() {
                   Tasks
                 </TabsTrigger>
               </TabsList>
-              
-              <TabsContent value="dashboard" className="mt-4">
-                <SecurityDashboard 
-                  client={selectedClient}
-                />
-              </TabsContent>
-              
-              <TabsContent value="tests" className="mt-4">
-                <Card className="p-4">
-                  <BPOSecurityTest 
-                    client={selectedClient}
-                    addAlert={addAlert}
-                    hideHeader={false}
-                  />
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="reports" className="mt-4">
-                <SecurityReports 
+            </div>
+            
+            <TabsContent value="dashboard">
+              <SecurityDashboard 
+                client={selectedClient}
+              />
+            </TabsContent>
+            
+            <TabsContent value="tests">
+              <Card className="p-4">
+                <BPOSecurityTest 
                   client={selectedClient}
                   addAlert={addAlert}
+                  hideHeader={false}
                 />
-              </TabsContent>
-              
-              <TabsContent value="tasks" className="mt-4">
-                <TasksManagement 
-                  client={selectedClient}
-                  addAlert={addAlert}
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
-          
-          <div className="lg:col-span-1">
-            <AlertNotificationPanel 
-              alerts={alerts}
-              clearAlerts={clearAlerts}
-              dismissAlert={dismissAlert}
-            />
-          </div>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="reports">
+              <SecurityReports 
+                client={selectedClient}
+                addAlert={addAlert}
+              />
+            </TabsContent>
+            
+            <TabsContent value="tasks">
+              <TasksManagement 
+                client={selectedClient}
+                addAlert={addAlert}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </TabContext.Provider>

@@ -103,9 +103,16 @@ const LoginForm = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Password</Label>
-              <a href="#" className="text-xs text-blue-600 hover:underline">
+              <button 
+                type="button" 
+                className="text-xs text-blue-600 hover:underline"
+                onClick={(e) => {
+                  e.preventDefault();
+                  // You can implement forgot password functionality here
+                }}
+              >
                 Forgot password?
-              </a>
+              </button>
             </div>
             <Input 
               id="password" 
@@ -133,25 +140,6 @@ const LoginForm = () => {
                 Sign In
               </span>
             )}
-          </Button>
-          
-          <div className="relative py-3">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200"></div>
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="px-2 bg-white text-gray-500">For demonstration</span>
-            </div>
-          </div>
-          
-          <Button 
-            type="button" 
-            variant="outline" 
-            className="w-full"
-            onClick={handleDemoLogin}
-            disabled={isLoading}
-          >
-            Use Demo Account
           </Button>
         </CardFooter>
       </form>

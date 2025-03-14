@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Bell, X, Info, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 
-const AlertNotificationPanel = ({ alerts, clearAlerts, dismissAlert }) => {
+const AlertNotificationPanel = ({ alerts, clearAlerts, dismissAlert, maxAlerts = 4, horizontal = false }) => {
   // Function to get the appropriate icon based on alert type
   const getAlertIcon = (type) => {
     switch(type) {
@@ -22,10 +22,19 @@ const AlertNotificationPanel = ({ alerts, clearAlerts, dismissAlert }) => {
     }
   };
 
+  // Limit the number of visible alerts
+  const visibleAlerts = alerts ? alerts.slice(0, maxAlerts) : [];
+  const hiddenAlertsCount = Math.max(0, alerts ? alerts.length - maxAlerts : 0);
+
+  // Don't render card if no alerts and horizontal layout
+  if (horizontal && (!alerts || alerts.length === 0)) {
+    return null;
+  }
+
   return (
-    <Card className={`shadow-md mt-4 border ${alerts && alerts.some(a => a.type === 'error') ? 'border-l-4 border-l-red-500 bg-red-50' : 'border-gray-200'}`}>
-      <CardHeader className="pb-2 bg-gray-50 rounded-t-lg">
-        <div className="flex flex-col items-start gap-2">
+    <Card className={`shadow-md border ${alerts && alerts.some(a => a.type === 'error') ? 'border-l-4 border-l-red-500 bg-red-50' : 'border-gray-200'}`}>
+      <CardHeader className={`pb-2 bg-gray-50 rounded-t-lg ${horizontal ? 'py-2' : ''}`}>
+        <div className="flex justify-between items-center">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <div className="relative">
               <Bell className={`h-5 w-5 ${alerts && alerts.some(a => a.type === 'error') ? 'text-red-500' : 'text-blue-500'}`} />
@@ -35,7 +44,7 @@ const AlertNotificationPanel = ({ alerts, clearAlerts, dismissAlert }) => {
                 </span>
               )}
             </div>
-            Alerts & Notifications
+            Alerts
           </CardTitle>
           {alerts && alerts.length > 0 && (
             <Button 
@@ -49,14 +58,16 @@ const AlertNotificationPanel = ({ alerts, clearAlerts, dismissAlert }) => {
           )}
         </div>
       </CardHeader>
-      <CardContent className={`${alerts && alerts.length > 0 ? 'p-3' : 'py-6'}`}>
+      <CardContent className={`${alerts && alerts.length > 0 ? (horizontal ? 'p-2' : 'p-3') : 'py-4'}`}>
         {alerts && alerts.length > 0 ? (
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {alerts.map((alert, index) => (
+          <div className={`${horizontal ? 'flex flex-wrap gap-2' : 'space-y-2'}`}>
+            {visibleAlerts.map((alert, index) => (
               <Alert 
-                key={index} 
+                key={alert.id || index} 
                 variant={alert.type === 'error' ? 'destructive' : 'default'}
                 className={`shadow-sm relative ${
+                  horizontal ? 'flex-1 min-w-[200px] max-w-[300px] p-3' : ''
+                } ${
                   alert.type === 'success' ? 'border-green-100 bg-green-50 text-green-800' : 
                   alert.type === 'error' ? 'border-red-200 bg-red-100 text-red-800 font-medium' : 
                   alert.type === 'info' ? 'border-blue-100 bg-blue-50 text-blue-800' : 
@@ -83,12 +94,16 @@ const AlertNotificationPanel = ({ alerts, clearAlerts, dismissAlert }) => {
                 </div>
               </Alert>
             ))}
+            
+            {hiddenAlertsCount > 0 && (
+              <div className={`text-sm text-gray-500 ${horizontal ? 'self-center flex-shrink-0' : 'text-center pt-1'}`}>
+                +{hiddenAlertsCount} more notification{hiddenAlertsCount > 1 ? 's' : ''}
+              </div>
+            )}
           </div>
         ) : (
-          <div className="text-center py-4 text-gray-500 text-sm">
-            <Bell className="h-10 w-10 mx-auto text-gray-300 mb-2" />
-            <p>No notifications at this time</p>
-            <p className="mt-1 text-xs">Alerts will appear here when you run security tests or perform other actions</p>
+          <div className="text-center py-2 text-gray-500 text-sm">
+            <p>No notifications</p>
           </div>
         )}
       </CardContent>

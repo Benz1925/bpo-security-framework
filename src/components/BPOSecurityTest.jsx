@@ -77,13 +77,11 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
     }));
     
     try {
-      const apiFunction = securityTestsApi[`run${testType.charAt(0).toUpperCase() + testType.slice(1)}Test`];
+      // Use the generic runTest function instead of looking for specific test functions
+      const result = await securityTestsApi.runTest(testType, client?.id);
       
-      if (!apiFunction) {
-        throw new Error(`API function for test type ${testType} not found`);
-      }
-      
-      const result = await apiFunction(client?.id);
+      // Debug log to understand the response format
+      console.log(`${testType} test result:`, result);
       
       setTestResults(prev => ({
         ...prev,
@@ -92,8 +90,8 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
       
       if (addAlert) {
         addAlert({
-          type: result ? 'success' : 'error',
-          message: result 
+          type: result && result.success === true ? 'success' : 'error',
+          message: result && result.success === true
             ? `${testType.charAt(0).toUpperCase() + testType.slice(1)} test completed successfully.` 
             : `${testType.charAt(0).toUpperCase() + testType.slice(1)} test failed.`
         });
@@ -103,9 +101,22 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
       handleViewTestDetails(testType);
     } catch (error) {
       console.error(`Error running ${testType} test:`, error);
+      // Create a properly formatted error result
+      const errorResult = {
+        success: false,
+        testType: testType,
+        timestamp: new Date().toISOString(),
+        details: {
+          title: `${testType.charAt(0).toUpperCase() + testType.slice(1)} Test Failed`,
+          description: `An error occurred: ${error.message}`,
+          checkpoints: [],
+          recommendations: ['Try again later', 'Contact support if the issue persists']
+        }
+      };
+      
       setTestResults(prev => ({
         ...prev,
-        [testType]: false
+        [testType]: errorResult
       }));
       
       if (addAlert) {
@@ -127,14 +138,20 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
     if (!isBrowser) return;
     
     try {
-      const details = await securityTestsApi.getTestDetails(testType, client?.id);
-      setTestDetails(prev => ({
-        ...prev,
-        [testType]: details
-      }));
-      setSelectedTest(testType);
+      // Get details from the test results instead of making a separate API call
+      const result = testResults[testType];
+      if (result && result.details) {
+        setTestDetails(prev => ({
+          ...prev,
+          [testType]: result.details
+        }));
+        setSelectedTest(testType);
+      } else {
+        // If no details are available, try running the test
+        await handleRunTest(testType);
+      }
     } catch (error) {
-      console.error(`Error fetching details for ${testType} test:`, error);
+      console.error(`Error handling details for ${testType} test:`, error);
       if (addAlert) {
         addAlert({
           type: 'error',
@@ -146,7 +163,7 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
   
   const getTestStatusIcon = (status) => {
     if (status === null) return null;
-    if (status === true) return <Check className="h-5 w-5 text-green-500" />;
+    if (status.success === true) return <Check className="h-5 w-5 text-green-500" />;
     return <X className="h-5 w-5 text-red-500" />;
   };
   
@@ -174,27 +191,61 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
     // Run each test in sequence
     for (const testType of testTypes) {
       try {
-        const apiFunction = securityTestsApi[`run${testType.charAt(0).toUpperCase() + testType.slice(1)}Test`];
-        if (!apiFunction) continue;
+        // Use the generic runTest function
+        const result = await securityTestsApi.runTest(testType, client?.id);
         
-        const result = await apiFunction(client?.id);
+        // Ensure the result is properly formatted
+        const formattedResult = result && typeof result === 'object' 
+          ? result 
+          : { 
+              success: false, 
+              testType, 
+              timestamp: new Date().toISOString(),
+              details: {
+                title: `${testType.charAt(0).toUpperCase() + testType.slice(1)} Test`,
+                description: 'Unable to get test details',
+                checkpoints: [],
+                recommendations: []
+              }
+            };
+            
         setTestResults(prev => ({
           ...prev,
-          [testType]: result
+          [testType]: formattedResult
         }));
         
-        // Fetch detailed results
-        const details = await securityTestsApi.getTestDetails(testType, client?.id);
-        setTestDetails(prev => ({
-          ...prev,
-          [testType]: details
-        }));
+        // Store details directly from the result
+        if (formattedResult && formattedResult.details) {
+          setTestDetails(prev => ({
+            ...prev,
+            [testType]: formattedResult.details
+          }));
+        }
         
       } catch (error) {
         console.error(`Error running ${testType} test:`, error);
+        
+        // Create a properly formatted error result
+        const errorResult = {
+          success: false,
+          testType: testType,
+          timestamp: new Date().toISOString(),
+          details: {
+            title: `${testType.charAt(0).toUpperCase() + testType.slice(1)} Test Failed`,
+            description: `An error occurred: ${error.message}`,
+            checkpoints: [],
+            recommendations: ['Try again later', 'Contact support if the issue persists']
+          }
+        };
+        
         setTestResults(prev => ({
           ...prev,
-          [testType]: false
+          [testType]: errorResult
+        }));
+        
+        setTestDetails(prev => ({
+          ...prev,
+          [testType]: errorResult.details
         }));
       } finally {
         setIsLoading(prev => ({
