@@ -25,20 +25,17 @@ const AlertNotificationPanel = ({ alerts, clearAlerts, dismissAlert, maxAlerts =
   // Limit the number of visible alerts
   const visibleAlerts = alerts ? alerts.slice(0, maxAlerts) : [];
   const hiddenAlertsCount = Math.max(0, alerts ? alerts.length - maxAlerts : 0);
+  const hasAlerts = alerts && alerts.length > 0;
 
-  // Don't render card if no alerts and horizontal layout
-  if (horizontal && (!alerts || alerts.length === 0)) {
-    return null;
-  }
-
+  // Always render the Card component with the same structure, just empty content when no alerts
   return (
-    <Card className={`shadow-md border ${alerts && alerts.some(a => a.type === 'error') ? 'border-l-4 border-l-red-500 bg-red-50' : 'border-gray-200'}`}>
+    <Card className={`shadow-md border transition-all duration-300 ease-in-out ${horizontal ? 'min-h-[60px]' : ''} ${hasAlerts && alerts.some(a => a.type === 'error') ? 'border-l-4 border-l-red-500 bg-red-50' : 'border-gray-200'}`}>
       <CardHeader className={`pb-2 bg-gray-50 rounded-t-lg ${horizontal ? 'py-2' : ''}`}>
         <div className="flex justify-between items-center">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <div className="relative">
-              <Bell className={`h-5 w-5 ${alerts && alerts.some(a => a.type === 'error') ? 'text-red-500' : 'text-blue-500'}`} />
-              {alerts && alerts.length > 0 && (
+              <Bell className={`h-5 w-5 ${hasAlerts && alerts.some(a => a.type === 'error') ? 'text-red-500' : 'text-blue-500'}`} />
+              {hasAlerts && (
                 <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
                   {alerts.length > 9 ? '9+' : alerts.length}
                 </span>
@@ -46,7 +43,7 @@ const AlertNotificationPanel = ({ alerts, clearAlerts, dismissAlert, maxAlerts =
             </div>
             Alerts
           </CardTitle>
-          {alerts && alerts.length > 0 && (
+          {hasAlerts && (
             <Button 
               variant="ghost" 
               size="sm" 
@@ -58,8 +55,8 @@ const AlertNotificationPanel = ({ alerts, clearAlerts, dismissAlert, maxAlerts =
           )}
         </div>
       </CardHeader>
-      <CardContent className={`${alerts && alerts.length > 0 ? (horizontal ? 'p-2' : 'p-3') : 'py-4'}`}>
-        {alerts && alerts.length > 0 ? (
+      <CardContent className={`${hasAlerts ? (horizontal ? 'p-2' : 'p-3') : 'py-4'}`}>
+        {hasAlerts ? (
           <div className={`${horizontal ? 'flex flex-wrap gap-2' : 'space-y-2'}`}>
             {visibleAlerts.map((alert, index) => (
               <Alert 
@@ -102,7 +99,7 @@ const AlertNotificationPanel = ({ alerts, clearAlerts, dismissAlert, maxAlerts =
             )}
           </div>
         ) : (
-          <div className="text-center py-2 text-gray-500 text-sm">
+          <div className={`text-center py-2 text-gray-500 text-sm ${horizontal ? 'min-h-[40px] flex items-center justify-center' : ''}`}>
             <p>No notifications</p>
           </div>
         )}

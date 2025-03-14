@@ -181,7 +181,8 @@ export default function Home() {
           />
         </div>
         
-        <div className="mb-4 min-h-[60px]">
+        {/* Alert container with fixed minimum height to prevent layout shifts */}
+        <div className="mb-4 min-h-[70px]">
           <AlertNotificationPanel 
             alerts={alerts}
             clearAlerts={clearAlerts}
