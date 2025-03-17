@@ -8,6 +8,12 @@ const AuthContext = createContext();
 // Custom hook to use the auth context
 export const useAuth = () => useContext(AuthContext);
 
+// Mock user credentials - ONLY allow this one admin account
+const VALID_CREDENTIALS = {
+  email: 'admin@bpo.com',
+  password: 'password123'
+};
+
 // Provider component that wraps the app and makes auth object available
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -62,10 +68,35 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Login function
-  const login = (userData) => {
-    setUser(userData);
-    localStorage.setItem('bpo_user', JSON.stringify(userData));
+  // Login function - validate against single admin credential
+  const login = async (email, password) => {
+    // Try Azure authentication first
+    try {
+      // In a real app, you would submit credentials to Azure's auth endpoint
+      // For demo, we'll skip this and use mock validation
+    } catch (error) {
+      console.log('Azure authentication not available in development');
+    }
+    
+    // Only allow the single valid credential
+    const isValidCredential = email === VALID_CREDENTIALS.email && password === VALID_CREDENTIALS.password;
+    
+    if (isValidCredential) {
+      // Successful login
+      const userData = {
+        id: Date.now().toString(),
+        email: email,
+        name: 'BPO Security Admin',
+        role: 'admin'
+      };
+      
+      setUser(userData);
+      localStorage.setItem('bpo_user', JSON.stringify(userData));
+      return true;
+    } else {
+      // Login failed - all other credentials will fail
+      return false;
+    }
   };
 
   // Logout function
