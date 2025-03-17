@@ -11,7 +11,8 @@ import SecurityReports from '@/components/reports/SecurityReports';
 import { useAuth } from '@/context/AuthContext';
 import TasksManagement from '@/components/tasks/TasksManagement';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, BarChart, FileText, CheckSquare } from 'lucide-react';
+import { Shield, BarChart, FileText, CheckSquare, AlertTriangle } from 'lucide-react';
+import SecurityEvents from "@/components/SecurityEvents";
 
 // Define types
 interface AlertType {
@@ -57,12 +58,25 @@ export default function Home() {
       });
     };
     
-    // Add event listener for custom navigation event
-    window.addEventListener('navigate-to-tasks', handleNavigateToTasks as EventListener);
+    const handleNavigateToTab = (event: CustomEvent) => {
+      if (event.detail && event.detail.tab) {
+        setActiveTab(event.detail.tab);
+        // Add alert about tab navigation
+        addAlert({
+          type: 'info',
+          message: `Navigated to ${event.detail.tab.replace(/([A-Z])/g, ' $1').toLowerCase()}`
+        });
+      }
+    };
     
-    // Clean up event listener on unmount
+    // Add event listeners for custom navigation events
+    window.addEventListener('navigate-to-tasks', handleNavigateToTasks as EventListener);
+    window.addEventListener('navigate-to-tab', handleNavigateToTab as EventListener);
+    
+    // Clean up event listeners on unmount
     return () => {
       window.removeEventListener('navigate-to-tasks', handleNavigateToTasks as EventListener);
+      window.removeEventListener('navigate-to-tab', handleNavigateToTab as EventListener);
     };
   }, []);
   
@@ -195,7 +209,7 @@ export default function Home() {
         <div className="flex-1">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="mb-4">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="dashboard" className="flex items-center gap-1.5">
                   <BarChart className="w-4 h-4" />
                   Dashboard
@@ -203,6 +217,10 @@ export default function Home() {
                 <TabsTrigger value="tests" className="flex items-center gap-1.5">
                   <Shield className="w-4 h-4" />
                   Security Tests
+                </TabsTrigger>
+                <TabsTrigger value="securityEvents" className="flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4" />
+                  Security Events
                 </TabsTrigger>
                 <TabsTrigger value="reports" className="flex items-center gap-1.5">
                   <FileText className="w-4 h-4" />
@@ -229,6 +247,13 @@ export default function Home() {
                   hideHeader={false}
                 />
               </Card>
+            </TabsContent>
+            
+            <TabsContent value="securityEvents">
+              <SecurityEvents 
+                client={selectedClient}
+                addAlert={addAlert}
+              />
             </TabsContent>
             
             <TabsContent value="reports">

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useContext } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, AlertTriangle, Check, X, BarChart, PieChart, Calendar, RefreshCw, TrendingUp, Download, Lock, UserCheck, AlertCircle, CheckCircle, ChevronRight } from 'lucide-react';
+import { Shield, AlertTriangle, Check, X, BarChart, PieChart, Calendar, RefreshCw, TrendingUp, Download, Lock, UserCheck, AlertCircle, CheckCircle, ChevronRight, Info, Clock, Activity, ExternalLink } from 'lucide-react';
 import { securityTestsApi } from '@/services/api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,6 +14,9 @@ import {
   PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
+import { Chart, LinearScale, CategoryScale, BarElement, PointElement, LineElement } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+import SecurityEventsSummary from './SecurityEventsSummary';
 
 const SecurityDashboardComponent = ({ client }, ref) => {
   // Access TabContext directly
@@ -460,6 +463,20 @@ const SecurityDashboardComponent = ({ client }, ref) => {
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Security Events Summary */}
+      <SecurityEventsSummary 
+        className="mb-4" 
+        onViewAll={() => {
+          if (typeof window !== 'undefined') {
+            // Create and dispatch a custom event to navigate to the Security Events tab
+            const customEvent = new CustomEvent('navigate-to-tab', { 
+              detail: { tab: 'securityEvents' } 
+            });
+            window.dispatchEvent(customEvent);
+          }
+        }}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
         {/* Overall Security Score */}
