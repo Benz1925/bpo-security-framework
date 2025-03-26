@@ -87,8 +87,15 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
         ...prev,
         [testType]: result
       }));
+
+      // Set test details directly here
+      if (result && result.details) {
+        setTestDetails(prev => ({
+          ...prev,
+          [testType]: result.details
+        }));
+      }
       
-      // Only add alert for the initial test result
       if (addAlert) {
         addAlert({
           type: result && result.success === true ? 'success' : 'error',
@@ -98,8 +105,8 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
         });
       }
       
-      // Fetch detailed results without adding another alert
-      handleViewTestDetails(testType, false);
+      // Set selected test after details are available
+      setSelectedTest(testType);
     } catch (error) {
       console.error(`Error running ${testType} test:`, error);
       // Create a properly formatted error result
@@ -119,6 +126,12 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
         ...prev,
         [testType]: errorResult
       }));
+
+      // Set error details
+      setTestDetails(prev => ({
+        ...prev,
+        [testType]: errorResult.details
+      }));
       
       if (addAlert) {
         addAlert({
@@ -134,32 +147,9 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
     }
   };
   
-  const handleViewTestDetails = async (testType, showAlert = true) => {
-    // Don't run during SSR
-    if (!isBrowser) return;
-    
-    try {
-      // Get details from the test results instead of making a separate API call
-      const result = testResults[testType];
-      if (result && result.details) {
-        setTestDetails(prev => ({
-          ...prev,
-          [testType]: result.details
-        }));
-        setSelectedTest(testType);
-      } else {
-        // If no details are available, try running the test
-        await handleRunTest(testType);
-      }
-    } catch (error) {
-      console.error(`Error handling details for ${testType} test:`, error);
-      if (addAlert && showAlert) {
-        addAlert({
-          type: 'error',
-          message: `Error fetching test details: ${error.message}`
-        });
-      }
-    }
+  const handleViewTestDetails = (testType) => {
+    // Simply set the selected test type
+    setSelectedTest(testType);
   };
   
   const getTestStatusIcon = (status) => {
