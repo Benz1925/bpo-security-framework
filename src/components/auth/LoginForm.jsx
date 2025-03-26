@@ -276,7 +276,7 @@ const LoginForm = () => {
         <div className="mx-auto p-2 bg-blue-600 rounded-full w-12 h-12 flex items-center justify-center mb-2">
           <Shield className="h-6 w-6 text-white" />
         </div>
-        <CardTitle className="text-2xl font-bold">BPO Security Framework</CardTitle>
+        <CardTitle className="text-2xl font-bold">CloudSentinel</CardTitle>
         <CardDescription>
           {showMfa ? 'Complete two-factor authentication' : 'Enter your credentials to access the security dashboard'}
         </CardDescription>
