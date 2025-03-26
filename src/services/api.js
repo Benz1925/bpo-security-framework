@@ -127,6 +127,8 @@ function getMockTestDetails(testType, success) {
   // Calculate overall score based on success - successful tests have 75-100% score, failed tests have 0-40% score
   const getScore = () => {
     if (success) {
+      // For successful tests, generate a score between 75 and 100
+      // This ensures alignment with the compliance status thresholds
       return Math.floor(Math.random() * 26) + 75; // 75-100 for successful tests
     } else {
       return Math.floor(Math.random() * 41); // 0-40 for failed tests
@@ -136,9 +138,9 @@ function getMockTestDetails(testType, success) {
   // Determine compliance status based on score and success
   const getComplianceStatus = (score) => {
     if (!success) return 'Non-compliant';
-    if (score >= 90) return 'Fully Compliant';
-    if (score >= 70) return 'Mostly Compliant';
-    if (score >= 50) return 'Partially Compliant';
+    if (score >= 95) return 'Fully Compliant';
+    if (score >= 85) return 'Mostly Compliant';
+    if (score >= 75) return 'Partially Compliant';
     return 'Minimally Compliant';
   };
 
