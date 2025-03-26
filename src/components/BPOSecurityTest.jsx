@@ -77,73 +77,86 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
     }));
     
     try {
-      // Use the generic runTest function instead of looking for specific test functions
-      const result = await securityTestsApi.runTest(testType, client?.id);
-      
-      // Debug log to understand the response format
-      console.log(`${testType} test result:`, result);
-      
-      setTestResults(prev => ({
-        ...prev,
-        [testType]: result
-      }));
+      // Create a promise that will run in the background
+      const testPromise = new Promise(async (resolve) => {
+        try {
+          const result = await securityTestsApi.runTest(testType, client?.id);
+          console.log(`${testType} test result:`, result);
+          
+          // Update results even if component is not visible
+          setTestResults(prev => ({
+            ...prev,
+            [testType]: result
+          }));
 
-      // Set test details directly here
-      if (result && result.details) {
-        setTestDetails(prev => ({
-          ...prev,
-          [testType]: result.details
-        }));
-      }
-      
-      if (addAlert) {
-        addAlert({
-          type: result && result.success === true ? 'success' : 'error',
-          message: result && result.success === true
-            ? `${testType.charAt(0).toUpperCase() + testType.slice(1)} test completed successfully.` 
-            : `${testType.charAt(0).toUpperCase() + testType.slice(1)} test failed.`
-        });
-      }
-      
-      // Set selected test after details are available
-      setSelectedTest(testType);
-    } catch (error) {
-      console.error(`Error running ${testType} test:`, error);
-      // Create a properly formatted error result
-      const errorResult = {
-        success: false,
-        testType: testType,
-        timestamp: new Date().toISOString(),
-        details: {
-          title: `${testType.charAt(0).toUpperCase() + testType.slice(1)} Test Failed`,
-          description: `An error occurred: ${error.message}`,
-          checkpoints: [],
-          recommendations: ['Try again later', 'Contact support if the issue persists']
+          if (result && result.details) {
+            setTestDetails(prev => ({
+              ...prev,
+              [testType]: result.details
+            }));
+          }
+          
+          if (addAlert) {
+            addAlert({
+              type: result && result.success === true ? 'success' : 'error',
+              message: result && result.success === true
+                ? `${testType.charAt(0).toUpperCase() + testType.slice(1)} test completed successfully.` 
+                : `${testType.charAt(0).toUpperCase() + testType.slice(1)} test failed.`
+            });
+          }
+          
+          resolve(result);
+        } catch (error) {
+          console.error(`Error running ${testType} test:`, error);
+          const errorResult = {
+            success: false,
+            testType: testType,
+            timestamp: new Date().toISOString(),
+            details: {
+              title: `${testType.charAt(0).toUpperCase() + testType.slice(1)} Test Failed`,
+              description: `An error occurred: ${error.message}`,
+              checkpoints: [],
+              recommendations: ['Try again later', 'Contact support if the issue persists']
+            }
+          };
+          
+          setTestResults(prev => ({
+            ...prev,
+            [testType]: errorResult
+          }));
+
+          setTestDetails(prev => ({
+            ...prev,
+            [testType]: errorResult.details
+          }));
+          
+          if (addAlert) {
+            addAlert({
+              type: 'error',
+              message: `Error running ${testType} test: ${error.message}`
+            });
+          }
+          
+          resolve(errorResult);
         }
-      };
-      
-      setTestResults(prev => ({
-        ...prev,
-        [testType]: errorResult
-      }));
+      });
 
-      // Set error details
-      setTestDetails(prev => ({
-        ...prev,
-        [testType]: errorResult.details
-      }));
-      
-      if (addAlert) {
-        addAlert({
-          type: 'error',
-          message: `Error running ${testType} test: ${error.message}`
-        });
-      }
+      // Store the promise in a ref to keep track of running tests
+      window._securityTestPromises = window._securityTestPromises || {};
+      window._securityTestPromises[testType] = testPromise;
+
+      // Wait for test completion
+      await testPromise;
     } finally {
       setIsLoading(prev => ({
         ...prev,
         [testType]: false
       }));
+      
+      // Clean up the promise reference
+      if (window._securityTestPromises) {
+        delete window._securityTestPromises[testType];
+      }
     }
   };
   
@@ -179,78 +192,27 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
       });
     }
     
-    // Run each test in sequence
-    for (const testType of testTypes) {
-      try {
-        // Use the generic runTest function
-        const result = await securityTestsApi.runTest(testType, client?.id);
-        
-        // Ensure the result is properly formatted
-        const formattedResult = result && typeof result === 'object' 
-          ? result 
-          : { 
-              success: false, 
-              testType, 
-              timestamp: new Date().toISOString(),
-              details: {
-                title: `${testType.charAt(0).toUpperCase() + testType.slice(1)} Test`,
-                description: 'Unable to get test details',
-                checkpoints: [],
-                recommendations: []
-              }
-            };
-            
-        setTestResults(prev => ({
-          ...prev,
-          [testType]: formattedResult
-        }));
-        
-        // Store details directly from the result
-        if (formattedResult && formattedResult.details) {
-          setTestDetails(prev => ({
-            ...prev,
-            [testType]: formattedResult.details
-          }));
-        }
-        
-      } catch (error) {
-        console.error(`Error running ${testType} test:`, error);
-        
-        // Create a properly formatted error result
-        const errorResult = {
-          success: false,
-          testType: testType,
-          timestamp: new Date().toISOString(),
-          details: {
-            title: `${testType.charAt(0).toUpperCase() + testType.slice(1)} Test Failed`,
-            description: `An error occurred: ${error.message}`,
-            checkpoints: [],
-            recommendations: ['Try again later', 'Contact support if the issue persists']
-          }
-        };
-        
-        setTestResults(prev => ({
-          ...prev,
-          [testType]: errorResult
-        }));
-        
-        setTestDetails(prev => ({
-          ...prev,
-          [testType]: errorResult.details
-        }));
-      } finally {
-        setIsLoading(prev => ({
-          ...prev,
-          [testType]: false
-        }));
-      }
-    }
+    // Run all tests concurrently
+    const testPromises = testTypes.map(testType => handleRunTest(testType));
     
-    if (addAlert) {
-      addAlert({
-        type: 'success',
-        message: 'All security tests completed.'
-      });
+    try {
+      // Wait for all tests to complete
+      await Promise.all(testPromises);
+      
+      if (addAlert) {
+        addAlert({
+          type: 'success',
+          message: 'All security tests completed.'
+        });
+      }
+    } catch (error) {
+      console.error('Error running all tests:', error);
+      if (addAlert) {
+        addAlert({
+          type: 'error',
+          message: 'Some tests failed to complete. Check individual test results for details.'
+        });
+      }
     }
   };
   
