@@ -88,6 +88,7 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
         [testType]: result
       }));
       
+      // Only add alert for the initial test result
       if (addAlert) {
         addAlert({
           type: result && result.success === true ? 'success' : 'error',
@@ -97,8 +98,8 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
         });
       }
       
-      // Fetch detailed results
-      handleViewTestDetails(testType);
+      // Fetch detailed results without adding another alert
+      handleViewTestDetails(testType, false);
     } catch (error) {
       console.error(`Error running ${testType} test:`, error);
       // Create a properly formatted error result
@@ -133,7 +134,7 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
     }
   };
   
-  const handleViewTestDetails = async (testType) => {
+  const handleViewTestDetails = async (testType, showAlert = true) => {
     // Don't run during SSR
     if (!isBrowser) return;
     
@@ -152,7 +153,7 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
       }
     } catch (error) {
       console.error(`Error handling details for ${testType} test:`, error);
-      if (addAlert) {
+      if (addAlert && showAlert) {
         addAlert({
           type: 'error',
           message: `Error fetching test details: ${error.message}`
