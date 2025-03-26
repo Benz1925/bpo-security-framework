@@ -167,7 +167,14 @@ const BPOSecurityTestComponent = ({ client, hideHeader = false, addAlert }, ref)
   
   const getTestStatusIcon = (status) => {
     if (status === null) return null;
-    if (status.success === true) return <Check className="h-5 w-5 text-green-500" />;
+    
+    // Get the score from the test details
+    const score = status.details?.overallScore;
+    
+    // Show check mark if score is 100% or if test passed and score >= 70
+    if (score === 100 || (status.success === true && score >= 70)) {
+      return <Check className="h-5 w-5 text-green-500" />;
+    }
     return <X className="h-5 w-5 text-red-500" />;
   };
   
