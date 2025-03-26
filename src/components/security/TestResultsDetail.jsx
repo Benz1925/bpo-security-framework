@@ -264,36 +264,45 @@ const TestResultsDetail = ({ testType, result, details, onBack }) => {
         <div>
           <h3 className="text-sm font-medium text-gray-500 mb-3">Recommendations</h3>
           <div className="space-y-3">
-            {testDetails.recommendations.map((rec, index) => (
-              <div 
-                key={index} 
-                className={`p-4 border rounded-md shadow-sm ${
-                  rec.priority?.toLowerCase() === 'critical' ? 'bg-red-50 border-red-100' : 
-                  rec.priority?.toLowerCase() === 'high' ? 'bg-amber-50 border-amber-100' : 
-                  'bg-white border-gray-100'
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <h4 className="font-medium text-gray-800">{rec.title}</h4>
-                  {rec.priority && (
-                    <span className={`text-xs px-2 py-1 rounded-full ${getSeverityClass(rec.priority)}`}>
-                      {rec.priority}
-                    </span>
+            {testDetails.recommendations.map((rec, index) => {
+              // Handle both string and object formats
+              const isObjectFormat = typeof rec === 'object';
+              const title = isObjectFormat ? rec.title : rec;
+              const description = isObjectFormat ? rec.description : '';
+              const priority = isObjectFormat ? rec.priority : 'medium';
+              const link = isObjectFormat ? rec.link : null;
+
+              return (
+                <div 
+                  key={index} 
+                  className={`p-4 border rounded-md shadow-sm ${
+                    priority?.toLowerCase() === 'critical' ? 'bg-red-50 border-red-100' : 
+                    priority?.toLowerCase() === 'high' ? 'bg-amber-50 border-amber-100' : 
+                    'bg-white border-gray-100'
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-medium text-gray-800">{title}</h4>
+                    {priority && (
+                      <span className={`text-xs px-2 py-1 rounded-full ${getSeverityClass(priority)}`}>
+                        {priority}
+                      </span>
+                    )}
+                  </div>
+                  {description && <p className="text-sm text-gray-600 mt-2">{description}</p>}
+                  {link && (
+                    <a 
+                      href={link} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm mt-3"
+                    >
+                      Learn More <ArrowRight className="h-3 w-3" />
+                    </a>
                   )}
                 </div>
-                <p className="text-sm text-gray-600 mt-2">{rec.description}</p>
-                {rec.link && (
-                  <a 
-                    href={rec.link} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm mt-3"
-                  >
-                    Learn More <ArrowRight className="h-3 w-3" />
-                  </a>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

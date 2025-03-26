@@ -158,10 +158,24 @@ function getMockTestDetails(testType, success) {
         { name: 'Encrypted database backups', status: success ? true : Math.random() > 0.3 }
       ],
       recommendations: [
-        'Implement TLS 1.3 for all API connections',
-        'Rotate encryption keys every 90 days',
-        'Use envelope encryption for sensitive data',
-        'Implement encrypted field-level security'
+        {
+          title: 'Implement TLS 1.3',
+          description: 'Upgrade all API connections to use TLS 1.3 for enhanced security.',
+          priority: 'high',
+          link: 'https://docs.microsoft.com/en-us/azure/security/fundamentals/tls-certificate-changes'
+        },
+        {
+          title: 'Rotate Encryption Keys',
+          description: 'Implement a 90-day rotation policy for all encryption keys.',
+          priority: 'medium',
+          link: 'https://docs.microsoft.com/en-us/azure/key-vault/keys/about-keys'
+        },
+        {
+          title: 'Envelope Encryption',
+          description: 'Use envelope encryption for sensitive data protection.',
+          priority: 'high',
+          link: 'https://docs.microsoft.com/en-us/azure/security/fundamentals/encryption-overview'
+        }
       ],
       overallScore: score,
       complianceStatus: getComplianceStatus(score)
