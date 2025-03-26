@@ -40,15 +40,22 @@ export const AuthProvider = ({ children }) => {
         if (response.ok) {
           const authData = await response.json();
           if (authData.clientPrincipal) {
-            // User is authenticated in Azure
+            // Store Azure user info but don't automatically authenticate
+            // This allows our MFA flow to work properly
             const azureUser = {
               id: authData.clientPrincipal.userId,
               name: authData.clientPrincipal.userDetails,
               email: authData.clientPrincipal.userDetails,
               role: authData.clientPrincipal.userRoles[0] || 'user'
             };
-            setUser(azureUser);
-            localStorage.setItem('bpo_user', JSON.stringify(azureUser));
+            // Only set user if they've completed MFA
+            const storedUser = localStorage.getItem('bpo_user');
+            if (storedUser) {
+              const userData = JSON.parse(storedUser);
+              if (userData.mfaVerified) {
+                setUser(userData);
+              }
+            }
           }
         }
       } catch (error) {
@@ -68,26 +75,25 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Login function - validate against single admin credential
-  const login = async (email, password) => {
-    // Try Azure authentication first
-    try {
-      // In a real app, you would submit credentials to Azure's auth endpoint
-      // For demo, we'll skip this and use mock validation
-    } catch (error) {
-      console.log('Azure authentication not available in development');
-    }
-    
+  // Login function - modified to support two-step MFA authentication
+  const login = async (email, password, verifyCredentialsOnly = false) => {
     // Only allow the single valid credential
     const isValidCredential = email === VALID_CREDENTIALS.email && password === VALID_CREDENTIALS.password;
     
+    // If this is just the first step (verify credentials) return the result without completing login
+    if (verifyCredentialsOnly) {
+      return isValidCredential;
+    }
+    
     if (isValidCredential) {
-      // Successful login
+      // Successful login (both credential check and MFA verification completed)
       const userData = {
         id: Date.now().toString(),
         email: email,
         name: 'BPO Security Admin',
-        role: 'admin'
+        role: 'admin',
+        mfaVerified: true,
+        lastLogin: new Date().toISOString()
       };
       
       setUser(userData);
