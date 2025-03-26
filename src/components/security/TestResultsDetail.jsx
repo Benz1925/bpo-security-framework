@@ -82,6 +82,9 @@ const TestResultsDetail = ({ testType, result, details, onBack }) => {
 
   // Safely calculate score - prevents hydration mismatch
   const score = useMemo(() => {
+    // If the overall test result is false (X mark), score should reflect failure
+    if (result === false) return 0;
+    
     // Handle null/undefined safely
     if (!testDetails.checkpoints) return 0;
     
@@ -89,23 +92,15 @@ const TestResultsDetail = ({ testType, result, details, onBack }) => {
     if (totalCheckpoints === 0) return 0;
     
     const passedCheckpoints = testDetails.checkpoints.filter(cp => cp.status).length;
-    
-    // If test passed, ensure score reflects this
-    if (result === true) {
-      // Calculate the pass rate as a percentage, but ensure it's at least 70% for passed tests
-      return Math.max(Math.round((passedCheckpoints / totalCheckpoints) * 100), 70);
-    }
-    
-    // For failed tests, calculate actual score
     return Math.round((passedCheckpoints / totalCheckpoints) * 100);
   }, [testDetails.checkpoints, result]);
   
   // Determine compliance status based on score and result
   const complianceStatus = useMemo(() => {
-    if (result === true) {
-      return score >= 90 ? "Compliant" : "Partially Compliant";
-    }
-    return score >= 50 ? "Partially Compliant" : "Non-Compliant";
+    if (result === false) return "Non-Compliant";
+    if (score === 100) return "Compliant";
+    if (score >= 70) return "Partially Compliant";
+    return "Non-Compliant";
   }, [score, result]);
 
   // Calculate overall status
