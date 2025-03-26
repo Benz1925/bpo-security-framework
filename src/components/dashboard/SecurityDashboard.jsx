@@ -101,9 +101,11 @@ const SecurityDashboardComponent = ({ client }, ref) => {
     
     // Generate mock results for each test type
     for (const testType of testTypes) {
-      // Use deterministic success based on client ID and test type
-      const success = ((parseInt(clientId) + testType.length) % 3) !== 0;
-      const mockDetails = getMockTestDetails(testType, success, clientId);
+      // Generate the mock details first to get the score
+      const mockDetails = getMockTestDetails(testType, clientId);
+      // Set success based on score threshold
+      const success = mockDetails.overallScore >= 70;
+      
       results[testType] = {
         success,
         testType,
@@ -112,7 +114,7 @@ const SecurityDashboardComponent = ({ client }, ref) => {
         isMock: true
       };
       
-      // Add to total score (deterministic score based on client ID)
+      // Add to total score
       const score = mockDetails.overallScore;
       totalScore += score;
       
@@ -732,20 +734,23 @@ const SecurityDashboard = forwardRef(SecurityDashboardComponent);
 
 // Security Score Card Component
 const SecurityScoreCard = ({ title, score, status, icon }) => {
-  // Status can be true (pass), false (fail), or null (not tested)
+  // Convert score string to number (remove % if present)
+  const scoreValue = parseInt(score.replace('%', ''));
+  
+  // Determine status based on score
   const getStatusColor = () => {
-    if (status === null) return 'bg-gray-100';
-    return status ? 'bg-green-100' : 'bg-red-100';
+    if (scoreValue >= 70) return 'bg-green-100';
+    return 'bg-red-100';
   };
 
   const getTextColor = () => {
-    if (status === null) return 'text-gray-500';
-    return status ? 'text-green-700' : 'text-red-700';
+    if (scoreValue >= 70) return 'text-green-700';
+    return 'text-red-700';
   };
 
   const getStatusText = () => {
-    if (status === null) return 'Not Tested';
-    return status ? 'Passed' : 'Failed';
+    if (scoreValue >= 70) return 'Passed';
+    return 'Failed';
   };
 
   return (
